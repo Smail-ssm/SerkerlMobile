@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "692724012595",
+    "firebase_url": "https://e-bike-b6281-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "e-bike-b6281",
+    "storage_bucket": "e-bike-b6281.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:692724012595:android:523c727df333c827cd7546",
+        "android_client_info": {
+          "package_name": "com.xdev.ebike.ebike"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "692724012595-dt9f2feoutehcpoknmu8772i6mtmucq8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCZlDu16U1L9KR_hior94Wdt6NGAdW_5lU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "692724012595-dt9f2feoutehcpoknmu8772i6mtmucq8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "692724012595-ia52mjht0sn3c9o1f3bvhqf79pvd0si2.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.xdev.ebike.ebike"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
