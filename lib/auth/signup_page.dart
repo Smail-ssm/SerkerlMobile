@@ -1,15 +1,18 @@
 import 'dart:io';
-import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:ebike/user.dart';
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
+import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../HomePage.dart'; // Import your home page or the next page after signing up
 
 class SignUpPage extends StatefulWidget {
+  final User? user; // Declare user variable to accept user info
+
+  SignUpPage({Key? key, this.user}) : super(key: key);
+
   @override
   _SignUpPageState createState() => _SignUpPageState();
 }
@@ -17,6 +20,7 @@ class SignUpPage extends StatefulWidget {
 class _SignUpPageState extends State<SignUpPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final _formKey = GlobalKey<FormState>(); // Declare and initialize _formKey
 
   late TextEditingController _emailController;
   late TextEditingController _passwordController;
@@ -33,7 +37,7 @@ class _SignUpPageState extends State<SignUpPage> {
   @override
   void initState() {
     super.initState();
-    _emailController = TextEditingController();
+    _emailController = TextEditingController(text: widget.user?.email ?? '');
     _passwordController = TextEditingController();
     _usernameController = TextEditingController();
     _fullNameController = TextEditingController();
@@ -44,88 +48,88 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    _usernameController.dispose();
-    _fullNameController.dispose();
-    _dateOfBirthController.dispose();
-    _phoneNumberController.dispose();
-    _addressController.dispose();
-    _roleController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Sign Up'),
       ),
-      body: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              controller: _emailController,
-              decoration: InputDecoration(labelText: 'Email'),
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextField(
+                        controller: _emailController,
+                        decoration: InputDecoration(labelText: 'Email'),
+                      ),
+                      SizedBox(height: 12.0),
+                      TextField(
+                        controller: _passwordController,
+                        decoration: InputDecoration(labelText: 'Password'),
+                        obscureText: true,
+                      ),
+                      SizedBox(height: 12.0),
+                      TextField(
+                        controller: _usernameController,
+                        decoration: InputDecoration(labelText: 'Username'),
+                      ),
+                      SizedBox(height: 12.0),
+                      TextField(
+                        controller: _fullNameController,
+                        decoration: InputDecoration(labelText: 'Full Name'),
+                      ),
+                      SizedBox(height: 12.0),
+                      TextField(
+                        controller: _dateOfBirthController,
+                        decoration: InputDecoration(
+                            labelText: 'Date of Birth (YYYY-MM-DD)'),
+                      ),
+                      SizedBox(height: 12.0),
+                      TextField(
+                        controller: _phoneNumberController,
+                        decoration: InputDecoration(labelText: 'Phone Number'),
+                      ),
+                      SizedBox(height: 12.0),
+                      TextField(
+                        controller: _addressController,
+                        decoration: InputDecoration(labelText: 'Address'),
+                      ),
+                      SizedBox(height: 12.0),
+                      TextField(
+                        controller: _roleController,
+                        decoration:
+                            InputDecoration(labelText: 'Role/Permissions'),
+                      ),
+                      SizedBox(height: 16.0),
+                      ElevatedButton(
+                        onPressed: _selectProfilePicture,
+                        child: Text('Select Profile Picture'),
+                      ),
+                      SizedBox(height: 12.0),
+                      _profilePicture != null
+                          ? Image.file(_profilePicture!)
+                          : SizedBox(),
+                      SizedBox(height: 16.0),
+                      _isLoading
+                          ? CircularProgressIndicator()
+                          : ElevatedButton(
+                              onPressed: _signUp,
+                              child: Text('Sign Up'),
+                            ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            SizedBox(height: 12.0),
-            TextField(
-              controller: _passwordController,
-              decoration: InputDecoration(labelText: 'Password'),
-              obscureText: true,
-            ),
-            SizedBox(height: 12.0),
-            TextField(
-              controller: _usernameController,
-              decoration: InputDecoration(labelText: 'Username'),
-            ),
-            SizedBox(height: 12.0),
-            TextField(
-              controller: _fullNameController,
-              decoration: InputDecoration(labelText: 'Full Name'),
-            ),
-            SizedBox(height: 12.0),
-            TextField(
-              controller: _dateOfBirthController,
-              decoration: InputDecoration(labelText: 'Date of Birth (YYYY-MM-DD)'),
-            ),
-            SizedBox(height: 12.0),
-            TextField(
-              controller: _phoneNumberController,
-              decoration: InputDecoration(labelText: 'Phone Number'),
-            ),
-            SizedBox(height: 12.0),
-            TextField(
-              controller: _addressController,
-              decoration: InputDecoration(labelText: 'Address'),
-            ),
-            SizedBox(height: 12.0),
-            TextField(
-              controller: _roleController,
-              decoration: InputDecoration(labelText: 'Role/Permissions'),
-            ),
-            SizedBox(height: 16.0),
-            ElevatedButton(
-              onPressed: _selectProfilePicture,
-              child: Text('Select Profile Picture'),
-            ),
-            SizedBox(height: 12.0),
-            SizedBox(height: 12.0),
-            _profilePicture != null
-                ? Image.file(_profilePicture!)
-                : SizedBox(), // Display selected profile picture if available
-            SizedBox(height: 16.0),
-            _isLoading
-                ? CircularProgressIndicator()
-                : ElevatedButton(
-              onPressed: _signUp,
-              child: Text('Sign Up'),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -136,52 +140,84 @@ class _SignUpPageState extends State<SignUpPage> {
     final pickedFile = await imagePicker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
-        _profilePicture = File(pickedFile.path,);
+        _profilePicture = File(
+          pickedFile.path,
+        );
       });
     }
   }
 
-  void _signUp() async {
+  _signUp() async {
     setState(() {
       _isLoading = true;
     });
+    UserCredential?
+        userCredential; // Declare userCredential outside the try-catch block
 
     try {
-      final FirebaseUser userCredential = await _auth.createUserWithEmailAndPassword(
+      setState(() {
+        _isLoading = true;
+      });
+
+      // Step 1: Validate the form
+      if (!_validateForm(_emailController, _passwordController,
+          _usernameController, _fullNameController, context)) {
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+      userCredential = await _auth.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // Upload profile picture to Firebase Storage
-      // Upload profile picture to Firebase Storage
+      // Step 2: Check if a profile picture was uploaded and get its URL
       String? profilePictureUrl;
       if (_profilePicture != null) {
-        final storageRef = firebase_storage.FirebaseStorage.instance.ref().child('profile_pictures/${userCredential.uid}');
-        await storageRef.putFile(_profilePicture!); // Use ! operator to assert non-nullability
-        profilePictureUrl = await storageRef.getDownloadURL();
+        // Get the file name with extension
+        String fileName = _profilePicture!.path.split('/').last;
+
+        final storageRef = firebase_storage.FirebaseStorage.instance
+            .ref()
+            .child('profile_pictures/${userCredential.user!.uid}/$fileName');
+
+        final uploadTask = storageRef.putFile(_profilePicture!);
+        await uploadTask.whenComplete(() async {
+          profilePictureUrl = await storageRef.getDownloadURL();
+        });
       }
 
-      // Create the user in Firestore
-      await _firestore.collection('users').doc(userCredential.uid).set({
-        'userId': userCredential.uid,
+      // Step 3: Create user credentials with email and password
+
+      // Step 4: Add user details to Firestore
+      await _firestore.collection('users').doc(userCredential.user!.uid).set({
+        'userId': userCredential.user!.uid,
         'email': _emailController.text.trim(),
         'username': _usernameController.text.trim(),
         'fullName': _fullNameController.text.trim(),
-        'profilePictureUrl': profilePictureUrl ?? '', // If profile picture was not uploaded, store an empty string
-        'dateOfBirth': _dateOfBirthController.text.isNotEmpty ? DateTime.parse(_dateOfBirthController.text) : null,
+        'profilePictureUrl': profilePictureUrl ?? '',
+        'dateOfBirth': _dateOfBirthController.text.isNotEmpty
+            ? DateTime.parse(_dateOfBirthController.text)
+            : null,
         'phoneNumber': _phoneNumberController.text.trim(),
         'address': _addressController.text.trim(),
         'role': _roleController.text.trim(),
         'creationDate': Timestamp.now(),
       });
 
-      // Navigate to the home page after successful sign-up
+      // Step 5: Create User object
+
+      // Step 6: Navigate to the home page
       Navigator.pushReplacement(
-        context,
+        context as BuildContext,
         MaterialPageRoute(builder: (context) => HomePage()),
       );
     } catch (e) {
-      // Show an error message if sign-up fails
+      // Delete the user account if an error occurs
+      if (userCredential != null) {
+        await userCredential.user?.delete();
+      } // Show an error message if sign-up fails
       showDialog(
         context: context,
         builder: (context) {
@@ -203,4 +239,75 @@ class _SignUpPageState extends State<SignUpPage> {
       });
     }
   }
+}
+
+void showMessageDialog(BuildContext context, String title, String message) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('OK'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+// Method to validate the form fields
+// Method to validate the form fields
+bool _validateForm(
+    TextEditingController emailController,
+    TextEditingController passwordController,
+    TextEditingController usernameController,
+    TextEditingController fullNameController,
+    BuildContext context) {
+  if (emailController.text.isEmpty ||
+      passwordController.text.isEmpty ||
+      usernameController.text.isEmpty ||
+      fullNameController.text.isEmpty) {
+    return false;
+  }
+
+  if (!_isValidEmail(emailController.text)) {
+    // Show error message if email is not valid
+    showMessageDialog(
+        context, 'Validation Error', 'Please enter a valid email address');
+
+    return false;
+  }
+
+  if (passwordController.text.length < 6) {
+    // Show error message if password is too short
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Validation Error'),
+          content: Text('Password must be at least 6 characters long.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+    return false;
+  }
+
+  // All validations passed
+  return true;
+}
+
+// Method to check if an email address is valid
+bool _isValidEmail(String email) {
+  final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+  return emailRegex.hasMatch(email);
 }

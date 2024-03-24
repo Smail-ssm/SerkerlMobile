@@ -1,27 +1,51 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ResetPasswordPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    TextEditingController _emailController = TextEditingController();
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Reset Password'),
+        title: const Text('Reset Password'),
       ),
       body: Padding(
-        padding: EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             TextField(
-              decoration: InputDecoration(labelText: 'Email or Mobile Number'),
+              controller: _emailController,
+              decoration:
+                  const InputDecoration(labelText: 'Email or Mobile Number'),
             ),
-            SizedBox(height: 16.0),
+            const SizedBox(height: 16.0),
             ElevatedButton(
-              onPressed: () {
-                // Perform password reset logic here
+              onPressed: () async {
+                String email = _emailController.text.trim();
+                try {
+                  await FirebaseAuth.instance
+                      .sendPasswordResetEmail(email: email);
+                  // Show a success message or navigate to a success page
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Password reset email sent to $email'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  // Show an error message if the password reset fails
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Password reset failed: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               },
-              child: Text('Reset Password'),
+              child: const Text('Reset Password'),
             ),
           ],
         ),
