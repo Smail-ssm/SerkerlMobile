@@ -1,5 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_signin_button/button_list.dart';
+import 'package:flutter_signin_button/button_view.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -104,10 +106,15 @@ class _SignInPageState extends State<SignInPage> {
                       ),
                       SizedBox(height: 8.0),
                       // Add the "Sign In with Google" button
-                      ElevatedButton(
+                      SignInButton(
+                        Buttons.Google,
                         onPressed: _signInWithGoogle,
-                        child: Text('Sign In with Google'),
                       ),
+                      SignInButton(
+                        Buttons.Facebook,
+                        mini: true,
+                        onPressed: () {},
+                      )
                     ],
                   ),
                 ),

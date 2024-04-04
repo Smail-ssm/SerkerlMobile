@@ -1,5 +1,4 @@
 import 'package:ebike/splashscreen.dart';
-import 'package:ebike/theme.dart';
 import 'package:ebike/util/AppLocalization.dart';
 import 'package:ebike/util/AppRouter.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -24,16 +23,23 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   late Locale _locale;
+  late Future<bool> _userSignedIn;
 
   @override
   void initState() {
     super.initState();
-    _loadLocale(); // Load saved locale when app starts
+    _initializeApp();
   }
 
-  // Method to load saved locale from SharedPreferences
-  void _loadLocale() async {
-    SharedPreferences prefs = await loadPrefs();
+  Future<void> _initializeApp() async {
+    await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform);
+    await _loadLocale();
+    _userSignedIn = _checkUserSignIn();
+  }
+
+  Future<void> _loadLocale() async {
+    SharedPreferences prefs = await _loadPrefs();
     String? languageCode = prefs.getString('languageCode');
     if (languageCode != null) {
       setState(() {
@@ -47,86 +53,49 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  // Method to change the app's locale and reload the app
-  void _setLocale(Locale newLocale) async {
-    SharedPreferences prefs = await loadPrefs();
+  Future<void> _setLocale(Locale newLocale) async {
+    SharedPreferences prefs = await _loadPrefs();
     await prefs.setString('languageCode', newLocale.languageCode);
     setState(() {
       _locale = newLocale;
     });
   }
 
-  final Future<FirebaseApp> _initialization = Firebase.initializeApp();
+  Future<SharedPreferences> _loadPrefs() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs;
+  }
+
+  Future<bool> _checkUserSignIn() async {
+    SharedPreferences prefs = await _loadPrefs();
+    String? userId = prefs.getString('userId');
+    return userId != null;
+  }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-      future: _initialization,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.done) {
-          return FutureBuilder(
-            future: checkUserSignIn(), // Check if user is signed in
-            builder: (context, AsyncSnapshot<bool> userSnapshot) {
-              if (userSnapshot.connectionState == ConnectionState.waiting) {
-                return const MaterialApp(
-                  onGenerateRoute: AppRouter.generateRoute,
-                  initialRoute: '/',
-                  home: SplashScreen(),
-                );
-              } else {
-                if (userSnapshot.data!) {
-                  return MaterialApp(
-                    title: 'E-Bike Rental App',
-                    theme: AppTheme.lightTheme(),
-                    onGenerateRoute: AppRouter.generateRoute,
-                    initialRoute: '/',
-                    locale: _locale,
-                    localizationsDelegates: [
-                      AppLocalization.delegate,
-                      // Add other delegates here
-                      // ...
-                    ],
-                    supportedLocales: AppLocalization.supportedLocales,
-                  );
-                } else {
-                  return MaterialApp(
-                    title: 'E-Bike Rental App',
-                    theme: AppTheme.lightTheme(),
-                    onGenerateRoute: AppRouter.generateRoute,
-                    initialRoute: '/signin',
-                    locale: _locale,
-                    localizationsDelegates: [
-                      AppLocalization.delegate,
-                      // Add other delegates here
-                      // ...
-                    ],
-                    supportedLocales: AppLocalization.supportedLocales,
-                  );
-                }
-              }
-            },
+      future: _userSignedIn,
+      builder: (context, AsyncSnapshot<bool> userSnapshot) {
+        if (userSnapshot.connectionState == ConnectionState.waiting) {
+          return MaterialApp(
+            home: SplashScreen(),
           );
         } else {
           return MaterialApp(
-            home: Scaffold(
-              body: Center(
-                child: CircularProgressIndicator(),
-              ),
-            ),
+            title: 'E-Bike Rental App',
+            onGenerateRoute: AppRouter.generateRoute,
+            initialRoute: userSnapshot.data! ? '/' : '/signin',
+            locale: _locale,
+            localizationsDelegates: const [
+              AppLocalization.delegate,
+              // Add other delegates here
+              // ...
+            ],
+            supportedLocales: AppLocalization.supportedLocales,
           );
         }
       },
     );
-  }
-
-  Future<bool> checkUserSignIn() async {
-    SharedPreferences prefs = await loadPrefs();
-    String? userId = prefs.getString('userId');
-    return userId != null; // Return true if user ID exists, false otherwise
-  }
-
-  Future<SharedPreferences> loadPrefs() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs;
   }
 }
