@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_signin_button/button_list.dart';
 import 'package:flutter_signin_button/button_view.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -58,8 +59,8 @@ class _SignInPageState extends State<SignInPage> {
                     children: [
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 30.0),
-                        child: Image.asset(
-                          'assets/images/app_logo.png',
+                        child: SvgPicture.asset(
+                          'assets/logo.svg',
                           height: 100,
                         ),
                       ),

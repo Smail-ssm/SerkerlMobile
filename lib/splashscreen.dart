@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:ebike/auth/signin_page.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -34,11 +33,11 @@ class _SplashScreenState extends State<SplashScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            SvgPicture.asset(
-              'assets/logo.svg',
-              height: 160,
-              width: 160,
-            ),
+            // SvgPicture.asset(
+            //   'assets/logo.svg',
+            //   height: 160,
+            //   width: 160,
+            // ),
             const SizedBox(
               height: 25,
             ),

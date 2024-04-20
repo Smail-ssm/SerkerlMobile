@@ -19,7 +19,9 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    fetchUserData();
     _getCurrentLocation(); // Fetch current location when the widget initializes
+    requestPermissions(context);
   }
 
   Future<void> _getCurrentLocation() async {
@@ -33,8 +35,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    requestPermissions(context);
-    fetchUserData();
     return Scaffold(
       appBar: AppBar(),
       drawer: Drawer(
@@ -105,6 +105,42 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
+Future<Map<String, dynamic>> fetchUserData() async {
+  FirebaseAuth auth = FirebaseAuth.instance;
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+  // Get the current user
+  User? user = auth.currentUser;
+
+  // Initialize an empty map to store user data
+  Map<String, dynamic> userData = {};
+
+  if (user != null) {
+    try {
+      // Retrieve user document from Firestore using the user UID
+      DocumentSnapshot userDoc =
+          await firestore.collection('users').doc(user.uid).get();
+
+      // Check if the user document exists
+      if (userDoc.exists) {
+        // Extract user data from the document
+        userData = userDoc.data() as Map<String, dynamic>;
+      } else {
+        // Handle case when user document does not exist
+        print('User document not found');
+      }
+    } catch (e) {
+      // Handle any errors that occur during the process
+      print('Error fetching user data: $e');
+    }
+  } else {
+    // Handle case when user is not authenticated
+    print('User not authenticated');
+  }
+
+  return userData;
+}
+
 Future<void> requestPermissions(BuildContext context) async {
   // List of permissions to request
   List<Permission> permissions = [
@@ -148,40 +184,4 @@ Future<void> requestPermissions(BuildContext context) async {
       }
     }
   });
-}
-
-Future<Map<String, dynamic>> fetchUserData() async {
-  FirebaseAuth auth = FirebaseAuth.instance;
-  FirebaseFirestore firestore = FirebaseFirestore.instance;
-
-  // Get the current user
-  User? user = auth.currentUser;
-
-  // Initialize an empty map to store user data
-  Map<String, dynamic> userData = {};
-
-  if (user != null) {
-    try {
-      // Retrieve user document from Firestore using the user UID
-      DocumentSnapshot userDoc =
-          await firestore.collection('users').doc(user.uid).get();
-
-      // Check if the user document exists
-      if (userDoc.exists) {
-        // Extract user data from the document
-        userData = userDoc.data() as Map<String, dynamic>;
-      } else {
-        // Handle case when user document does not exist
-        print('User document not found');
-      }
-    } catch (e) {
-      // Handle any errors that occur during the process
-      print('Error fetching user data: $e');
-    }
-  } else {
-    // Handle case when user is not authenticated
-    print('User not authenticated');
-  }
-
-  return userData;
 }
