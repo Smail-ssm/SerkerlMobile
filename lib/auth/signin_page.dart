@@ -26,103 +26,112 @@ class _SignInPageState extends State<SignInPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.red, Colors.blue], // Your gradient colors
-          ),
-        ),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
-                    spreadRadius: 3,
-                    blurRadius: 5,
-                    offset: Offset(0, 3),
-                  ),
-                ],
+      body: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                colors: [Colors.red, Colors.blue], // Your gradient colors
               ),
+            ),
+            child: Center(
               child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 30.0),
-                        child: SvgPicture.asset(
-                          'assets/logo.svg',
-                          height: 100,
-                        ),
+                padding: const EdgeInsets.all(16.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        spreadRadius: 3,
+                        blurRadius: 5,
+                        offset: Offset(0, 3),
                       ),
-                      TextField(
-                        controller: _emailController,
-                        decoration: InputDecoration(labelText: 'Email'),
-                      ),
-                      SizedBox(height: 12.0),
-                      TextField(
-                        controller: _passwordController,
-                        decoration: InputDecoration(labelText: 'Password'),
-                        obscureText: true,
-                      ),
-                      SizedBox(height: 16.0),
-                      _isLoading
-                          ? CircularProgressIndicator()
-                          : ElevatedButton(
-                              onPressed: _signIn,
-                              child: Text('Sign In'),
-                            ),
-                      SizedBox(height: 8.0),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => SignUpPage(),
-                            ),
-                          );
-                        },
-                        child: Text('Don\'t have an account? Sign up'),
-                      ),
-                      SizedBox(height: 8.0),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ResetPasswordPage(),
-                            ),
-                          );
-                        },
-                        child: Text('Forgot password? Reset it'),
-                      ),
-                      SizedBox(height: 8.0),
-                      // Add the "Sign In with Google" button
-                      SignInButton(
-                        Buttons.Google,
-                        onPressed: _signInWithGoogle,
-                      ),
-                      SignInButton(
-                        Buttons.Facebook,
-                        mini: true,
-                        onPressed: () {},
-                      )
                     ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 30.0),
+                            child: SvgPicture.asset(
+                              'assets/logo.svg',
+                              height: 100,
+                            ),
+                          ),
+                          TextField(
+                            controller: _emailController,
+                            decoration: InputDecoration(labelText: 'Email'),
+                          ),
+                          SizedBox(height: 12.0),
+                          TextField(
+                            controller: _passwordController,
+                            decoration: InputDecoration(labelText: 'Password'),
+                            obscureText: true,
+                          ),
+                          SizedBox(height: 16.0),
+                          ElevatedButton(
+                            onPressed: _isLoading ? null : _signIn,
+                            child: Text('Sign In'),
+                          ),
+                          SizedBox(height: 8.0),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => SignUpPage(),
+                                ),
+                              );
+                            },
+                            child: Text('Don\'t have an account? Sign up'),
+                          ),
+                          SizedBox(height: 8.0),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ResetPasswordPage(),
+                                ),
+                              );
+                            },
+                            child: Text('Forgot password? Reset it'),
+                          ),
+                          SizedBox(height: 8.0),
+                          SignInButton(
+                            Buttons.Google,
+                            onPressed: _signInWithGoogle,
+                          ),
+                          SignInButton(
+                            Buttons.Facebook,
+                            mini: true,
+                            onPressed: () {},
+                          )
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
+          if (_isLoading)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.5),
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -170,7 +179,6 @@ class _SignInPageState extends State<SignInPage> {
     }
   }
 
-  // Method to handle sign in with Google
   void _signInWithGoogle() async {
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
@@ -184,10 +192,8 @@ class _SignInPageState extends State<SignInPage> {
         final UserCredential userCredential =
             await _auth.signInWithCredential(credential);
 
-        // Check if the user is signing in for the first time
         final User? firebaseUser = userCredential.user;
         if (userCredential.additionalUserInfo!.isNewUser) {
-          // If the user is new, navigate to the sign-up page
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -195,7 +201,6 @@ class _SignInPageState extends State<SignInPage> {
             ),
           );
         } else {
-          // If the user is not new, navigate to the home page
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -206,7 +211,6 @@ class _SignInPageState extends State<SignInPage> {
       }
     } catch (e) {
       print('Error signing in with Google: $e');
-      // Show error dialog
       showDialog(
         context: context,
         builder: (context) => AlertDialog(

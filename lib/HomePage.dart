@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:ebike/util/AppRouter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'auth/signin_page.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -15,13 +19,24 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   late LatLng _currentLocation =
       const LatLng(0.0, 0.0); // Initialize with a default value
+  late Map<String, dynamic> _userData =
+      {}; // User data extracted from Firestore
 
   @override
   void initState() {
     super.initState();
-    fetchUserData();
+    _fetchUserData(); // Fetch user data when the widget initializes
     _getCurrentLocation(); // Fetch current location when the widget initializes
     requestPermissions(context);
+  }
+
+  Future<void> _fetchUserData() async {
+    // Call fetchUserData() to get user data from Firestore
+    Map<String, dynamic> userData = await fetchUserData();
+    setState(() {
+      _userData =
+          userData; // Update the _userData variable with the fetched data
+    });
   }
 
   Future<void> _getCurrentLocation() async {
@@ -31,6 +46,7 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _currentLocation = LatLng(position.latitude, position.longitude);
     });
+    print("Current position: " + _currentLocation.toString());
   }
 
   @override
@@ -42,18 +58,20 @@ class _HomePageState extends State<HomePage> {
           children: [
             UserAccountsDrawerHeader(
               accountName: Text(
-                'AppMaking.co',
-                style:
-                    TextStyle(color: Colors.black), // Set text color to black
+                _userData['fullName'] ?? 'Guest',
+                // Display user's display name, or 'Guest' if not available
+                style: TextStyle(color: Colors.black),
               ),
               accountEmail: Text(
-                'sundar@appmaking.co',
-                style:
-                    TextStyle(color: Colors.black), // Set text color to black
+                _userData['email'] ?? 'No email',
+                // Display user's email, or 'No email' if not available
+                style: TextStyle(color: Colors.black),
               ),
               currentAccountPicture: CircleAvatar(
                 backgroundImage: NetworkImage(
-                    'https://appmaking.co/wp-content/uploads/2021/08/appmaking-logo-colored.png'),
+                  _userData['profilePictureUrl'] ??
+                      '', // Display user's photo, if available
+                ),
               ),
               decoration: BoxDecoration(
                 image: DecorationImage(
@@ -94,32 +112,71 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
+      body: FlutterMap(
+        options: MapOptions(
+          initialCenter:
+              _currentLocation, // Use your current location as the center
+          initialZoom: 13.0, // Set initial zoom level
+        ),
+        children: [
+          TileLayer(
+            urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            subdomains: ['a', 'b', 'c'],
+          ),
+        ],
+      ),
     );
   }
 
   Future<void> onLogout() async {
-    await FirebaseAuth.instance.signOut();
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
-    AppRouter.navigateTo(context, '/signin');
+    bool confirmLogout = await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Logout"),
+          content: Text("Are you sure you want to logout?"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context)
+                    .pop(false); // Return false to indicate cancel
+              },
+              child: Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context)
+                    .pop(true); // Return true to indicate confirmation
+              },
+              child: Text("Logout"),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmLogout == true) {
+      await FirebaseAuth.instance.signOut();
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => SignInPage()));
+    }
   }
 }
 
 Future<Map<String, dynamic>> fetchUserData() async {
-  FirebaseAuth auth = FirebaseAuth.instance;
   FirebaseFirestore firestore = FirebaseFirestore.instance;
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  String? userId = prefs.getString('userId');
 
-  // Get the current user
-  User? user = auth.currentUser;
-
-  // Initialize an empty map to store user data
   Map<String, dynamic> userData = {};
 
-  if (user != null) {
+  if (userId != null) {
     try {
-      // Retrieve user document from Firestore using the user UID
+      // Retrieve user document from Firestore using the user ID
       DocumentSnapshot userDoc =
-          await firestore.collection('users').doc(user.uid).get();
+          await firestore.collection('users').doc(userId).get();
 
       // Check if the user document exists
       if (userDoc.exists) {
@@ -134,8 +191,8 @@ Future<Map<String, dynamic>> fetchUserData() async {
       print('Error fetching user data: $e');
     }
   } else {
-    // Handle case when user is not authenticated
-    print('User not authenticated');
+    // Handle case when user ID is not available in SharedPreferences
+    print('User ID not found in SharedPreferences');
   }
 
   return userData;
@@ -146,7 +203,10 @@ Future<void> requestPermissions(BuildContext context) async {
   List<Permission> permissions = [
     Permission.location,
     Permission.notification,
-    Permission.storage,
+    Permission.manageExternalStorage,
+    Permission.photos,
+    Permission.videos,
+    Permission.audio
   ];
 
   // Request permissions
@@ -161,7 +221,8 @@ Future<void> requestPermissions(BuildContext context) async {
         context: context,
         builder: (context) {
           return AlertDialog(
-            title: Text('${permission.toString().split('.').last} Permission'),
+            title: Text(
+                '${permission.toString().split('.').last[0].toUpperCase()}${permission.toString().split('.').last.substring(1)} Permission'),
             content: Text(
               '${permission.toString().split('.').last} permission is required to use the app. Please grant the permission in settings.',
             ),

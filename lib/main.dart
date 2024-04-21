@@ -1,16 +1,14 @@
-import 'package:ebike/splashscreen.dart';
-import 'package:ebike/util/AppRouter.dart';
+// Import the SignInPage if not already imported
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'firebase_options.dart';
+import 'HomePage.dart';
+import 'auth/signin_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp();
   runApp(MyApp());
 }
 
@@ -20,7 +18,6 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'E-Bike Rental App',
       home: App(),
-      onGenerateRoute: AppRouter.generateRoute,
     );
   }
 }
@@ -31,7 +28,7 @@ class App extends StatefulWidget {
 }
 
 class _AppState extends State<App> {
-  late bool _userSignedIn;
+  bool? _userSignedIn;
 
   @override
   void initState() {
@@ -54,23 +51,12 @@ class _AppState extends State<App> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<void>(
-      future:
-          _checkUserSignIn(), // Update the future to match the correct Future type
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return MaterialApp(
-            home: SplashScreen(),
-          );
-        } else {
-          return MaterialApp(
-            title: 'E-Bike Rental App',
-            onGenerateRoute: AppRouter.generateRoute,
-            initialRoute:
-                _userSignedIn ? '/' : '/signin', // Use _userSignedIn directly
-          );
-        }
-      },
-    );
+    if (_userSignedIn == null) {
+      // If user sign-in status is not yet determined, show loading indicator
+      return SignInPage();
+    } else {
+      // If user is signed in, navigate to HomePage, otherwise navigate to SignInPage
+      return _userSignedIn! ? HomePage() : SignInPage();
+    }
   }
 }
