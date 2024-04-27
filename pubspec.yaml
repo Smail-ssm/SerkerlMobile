@@ -26,6 +26,7 @@ dependencies:
   flutter_svg: ^2.0.10+1
   google_sign_in: ^6.1.6
   flutter_signin_button: ^2.0.0
+  flutter_map_location_marker: ^8.0.8
 
 
 dev_dependencies:

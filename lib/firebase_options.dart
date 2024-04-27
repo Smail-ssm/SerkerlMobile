@@ -7,8 +7,8 @@ import 'package:flutter/foundation.dart'
 /// Default [FirebaseOptions] for use with your Firebase apps.
 ///
 /// Example:
-/// ```dart
-/// import 'firebase_options.dart';
+/// ```UserProfileEditPage.dart
+/// import 'firebase_options.UserProfileEditPage.dart';
 /// // ...
 /// await Firebase.initializeApp(
 ///   options: DefaultFirebaseOptions.currentPlatform,
@@ -52,7 +52,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '692724012595',
     projectId: 'e-bike-b6281',
     authDomain: 'e-bike-b6281.firebaseapp.com',
-    databaseURL: 'https://e-bike-b6281-default-rtdb.europe-west1.firebasedatabase.app',
+    databaseURL:
+        'https://e-bike-b6281-default-rtdb.europe-west1.firebasedatabase.app',
     storageBucket: 'e-bike-b6281.appspot.com',
     measurementId: 'G-836ERZTQBK',
   );
@@ -62,7 +63,8 @@ class DefaultFirebaseOptions {
     appId: '1:692724012595:android:523c727df333c827cd7546',
     messagingSenderId: '692724012595',
     projectId: 'e-bike-b6281',
-    databaseURL: 'https://e-bike-b6281-default-rtdb.europe-west1.firebasedatabase.app',
+    databaseURL:
+        'https://e-bike-b6281-default-rtdb.europe-west1.firebasedatabase.app',
     storageBucket: 'e-bike-b6281.appspot.com',
   );
 
@@ -71,9 +73,11 @@ class DefaultFirebaseOptions {
     appId: '1:692724012595:ios:0747d2b2ab80f5fdcd7546',
     messagingSenderId: '692724012595',
     projectId: 'e-bike-b6281',
-    databaseURL: 'https://e-bike-b6281-default-rtdb.europe-west1.firebasedatabase.app',
+    databaseURL:
+        'https://e-bike-b6281-default-rtdb.europe-west1.firebasedatabase.app',
     storageBucket: 'e-bike-b6281.appspot.com',
-    iosClientId: '692724012595-ia52mjht0sn3c9o1f3bvhqf79pvd0si2.apps.googleusercontent.com',
+    iosClientId:
+        '692724012595-ia52mjht0sn3c9o1f3bvhqf79pvd0si2.apps.googleusercontent.com',
     iosBundleId: 'com.xdev.ebike.ebike',
   );
 }

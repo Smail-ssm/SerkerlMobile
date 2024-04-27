@@ -4,9 +4,9 @@ import 'package:flutter_signin_button/button_list.dart';
 import 'package:flutter_signin_button/button_view.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../HomePage.dart';
+import '../util/util.dart';
 import 'ResetPassword.dart';
 import 'signup_page.dart'; // Assuming this is the import for the SignUpPage
 
@@ -147,9 +147,8 @@ class _SignInPageState extends State<SignInPage> {
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      prefs.setString('userId', userCredential.user!.uid);
 
+      saveSP('userId', userCredential.user!.uid);
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
