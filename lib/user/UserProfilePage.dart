@@ -60,10 +60,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 icon: Icons.location_city,
                 label: 'Address',
                 value: widget.user.address),
-            UserInfoRow(
-                icon: Icons.admin_panel_settings,
-                label: 'Role',
-                value: widget.user.role),
             const Divider(),
             UserInfoRow(
               icon: Icons.calendar_today,

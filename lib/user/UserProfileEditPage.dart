@@ -71,7 +71,7 @@ class _UserProfileEditPageState extends State<UserProfileEditPage> {
                       ),
                       IconButton(
                         onPressed: _pickImage,
-                        icon: Icon(Icons.edit),
+                        icon: const Icon(Icons.edit),
                       ),
                     ],
                   ),
@@ -79,6 +79,16 @@ class _UserProfileEditPageState extends State<UserProfileEditPage> {
                   _buildTextField('Full Name:', _fullNameController),
                   _buildTextField('Phone Number:', _phoneNumberController),
                   _buildTextField('Address:', _addressController),
+                  // ElevatedButton(
+                  //   child: const Text('Delete Account'),
+                  //   style: ElevatedButton.styleFrom(
+                  //     backgroundColor:
+                  //         Colors.red, // Visually indicate destructive action
+                  //   ),
+                  //   onPressed: () {
+                  //     //_deleteUserAccount,
+                  //   },
+                  // ),
                 ],
               ),
             ),
@@ -86,7 +96,7 @@ class _UserProfileEditPageState extends State<UserProfileEditPage> {
           if (_isLoading)
             Container(
               color: Colors.black.withOpacity(0.5),
-              child: Center(
+              child: const Center(
                 child: CircularProgressIndicator(),
               ),
             ),
@@ -132,10 +142,10 @@ class _UserProfileEditPageState extends State<UserProfileEditPage> {
       userId: widget.user.userId,
       email: widget.user.email,
       username: _usernameController.text.trim(),
+      // password: widget.user.password,
       fullName: _fullNameController.text.trim(),
       phoneNumber: _phoneNumberController.text.trim(),
       address: _addressController.text.trim(),
-      role: widget.user.role,
       profilePictureUrl: widget.user.profilePictureUrl,
       creationDate: widget.user.creationDate,
     );
@@ -180,6 +190,129 @@ class _UserProfileEditPageState extends State<UserProfileEditPage> {
       });
     }
   }
+
+  // Future<void> _deleteUserAccount() async {
+  //   // 1. Confirmation Dialog:
+  //   final confirmation = await showDialog(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: const Text('Delete Account'),
+  //       content: const Text(
+  //           'Are you sure you want to delete your account? This action is irreversible.'),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context, false),
+  //           child: const Text('Cancel'),
+  //         ),
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context, true),
+  //           child: const Text('Delete'),
+  //           style: TextButton.styleFrom(iconColor: Colors.red),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  //
+  //   // 2. Handle user confirmation:
+  //   if (confirmation == true) {
+  //     try {
+  //       // 3. Delete user from Firebase Authentication:
+  //       final user = FirebaseAuth.instance.currentUser;
+  //       if (user != null) {
+  //         final credential = EmailAuthProvider.credential(
+  //             email: user.email!,
+  //             password: await encryptDecryptText(
+  //                 widget.user.password, EncryptionMode.decrypt));
+  //         await user.reauthenticateWithCredential(credential);
+  //         await FirebaseAuth.instance.currentUser!.delete();
+  //       }
+  //
+  //       // 4. Delete profile picture from Firebase Storage:
+  //       final profilePictureRef = FirebaseStorage.instance.ref().child(
+  //           getFirestoreDocument() + '/profile_pictures/${widget.user.userId}');
+  //       bool profilePictureExists = false;
+  //       try {
+  //         await profilePictureRef.getMetadata();
+  //         profilePictureExists = true;
+  //       } catch (e) {
+  //         print('Profile picture not found: $e');
+  //       }
+  //
+  //       if (profilePictureExists) {
+  //         await profilePictureRef.delete();
+  //         print('Profile picture deleted successfully');
+  //       } else {
+  //         print('No profile picture found');
+  //       }
+  //
+  //       // 5. Delete user document from Firestore:
+  //       final userDocRef = FirebaseFirestore.instance
+  //           .collection(getFirestoreDocument())
+  //           .doc('users')
+  //           .collection(widget.user.userId)
+  //           .doc('user');
+  //       bool userDocExists = false;
+  //       try {
+  //         final userDoc = await userDocRef.get();
+  //         if (userDoc.exists) {
+  //           userDocExists = true;
+  //         }
+  //       } catch (e) {
+  //         print('Error checking user document existence: $e');
+  //       }
+  //
+  //       if (userDocExists) {
+  //         await userDocRef.delete();
+  //         print('User document deleted successfully');
+  //       } else {
+  //         print('No user document found');
+  //       }
+  //
+  //       // Show success dialog
+  //       await showDialog(
+  //         context: context,
+  //         barrierDismissible: false,
+  //         builder: (context) => WillPopScope(
+  //           onWillPop: () => Future.value(false),
+  //           child: AlertDialog(
+  //             title: const Text('Account Deleted'),
+  //             content: const Text(
+  //                 'Your account data has been permanently deleted from all servers.'),
+  //             actions: [
+  //               TextButton(
+  //                 onPressed: () => Navigator.pushReplacement(
+  //                   context,
+  //                   MaterialPageRoute(builder: (context) => SignInPage()),
+  //                 ),
+  //                 child: const Text('Go to Login'),
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //       );
+  //     } catch (error) {
+  //       // Show error dialog
+  //       print('Error deleting account: $error');
+  //       showDialog(
+  //         context: context,
+  //         barrierDismissible: false,
+  //         builder: (context) => WillPopScope(
+  //           onWillPop: () => Future.value(false),
+  //           child: AlertDialog(
+  //             title: const Text('Error'),
+  //             content: Text('Failed to delete account. Error: $error'),
+  //             actions: [
+  //               TextButton(
+  //                 onPressed: () => Navigator.of(context).pop(),
+  //                 child: const Text('OK'),
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //       );
+  //     }
+  //   }
+  // }
 
   @override
   void dispose() {

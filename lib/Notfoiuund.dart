@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:latlong2/latlong.dart';
 
 class Notfound extends StatefulWidget {
   @override
@@ -7,8 +6,7 @@ class Notfound extends StatefulWidget {
 }
 
 class _NotfoundState extends State<Notfound> {
-  late LatLng _currentLocation =
-      const LatLng(0.0, 0.0); // Initialize with a default value
+  // Initialize with a default value
 
   @override
   void initState() {

@@ -5,11 +5,10 @@ class utilisateur {
   final String email;
   final String username;
   final String fullName;
-  final String? profilePictureUrl;
+  final String profilePictureUrl;
   final DateTime? dateOfBirth;
   final String phoneNumber;
   final String address;
-  final String role;
   final Timestamp creationDate;
 
   utilisateur({
@@ -17,11 +16,10 @@ class utilisateur {
     required this.email,
     required this.username,
     required this.fullName,
-    this.profilePictureUrl,
+    required this.profilePictureUrl,
     this.dateOfBirth,
     required this.phoneNumber,
     required this.address,
-    required this.role,
     required this.creationDate,
   });
 // Add a factory constructor to create Utilisateur from Firestore data
@@ -31,13 +29,12 @@ class utilisateur {
       email: data['email'] as String,
       username: data['username'] as String,
       fullName: data['fullName'] as String,
-      profilePictureUrl: data['profilePictureUrl'] as String?,
+      profilePictureUrl: data['profilePictureUrl'] as String,
       dateOfBirth: data['dateOfBirth'] != null
           ? (data['dateOfBirth'] as Timestamp).toDate()
           : null,
       phoneNumber: data['phoneNumber'] as String,
       address: data['address'] as String,
-      role: data['role'] as String,
       creationDate: data['creationDate'] as Timestamp,
     );
   }
@@ -47,13 +44,12 @@ class utilisateur {
         email: userData['email'] as String,
         username: userData['username'] as String,
         fullName: userData['fullName'] as String,
-        profilePictureUrl: userData['profilePictureUrl'] as String?,
+        profilePictureUrl: userData['profilePictureUrl'] as String,
         dateOfBirth: userData['dateOfBirth'] != null
             ? DateTime.parse(userData['dateOfBirth'] as String)
             : null,
         phoneNumber: userData['phoneNumber'] as String,
         address: userData['address'] as String,
-        role: userData['role'] as String,
         creationDate: userData['creationDate'] as Timestamp,
       );
 }

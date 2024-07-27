@@ -13,7 +13,7 @@ import '../HomePage.dart'; // Import your home page or the next page after signi
 class SignUpPage extends StatefulWidget {
   final User? user; // Declare user variable to accept user info
 
-  SignUpPage({Key? key, this.user}) : super(key: key);
+  const SignUpPage({Key? key, this.user}) : super(key: key);
 
   @override
   _SignUpPageState createState() => _SignUpPageState();
@@ -22,7 +22,6 @@ class SignUpPage extends StatefulWidget {
 class _SignUpPageState extends State<SignUpPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final _formKey = GlobalKey<FormState>(); // Declare and initialize _formKey
 
   late TextEditingController _emailController;
   late TextEditingController _passwordController;
@@ -33,7 +32,6 @@ class _SignUpPageState extends State<SignUpPage> {
   late TextEditingController _addressController;
   late TextEditingController _roleController;
 
-  bool _isLoading = false;
   File? _profilePicture;
 
   @override
@@ -53,81 +51,77 @@ class _SignUpPageState extends State<SignUpPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Sign Up'),
+        title: const Text('Sign Up'),
       ),
       body: SingleChildScrollView(
         child: Stack(
           children: [
             // Existing form and button widgets
             Padding(
-              padding: EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(16.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   TextField(
                     controller: _emailController,
-                    decoration: InputDecoration(labelText: 'Email'),
+                    decoration: const InputDecoration(labelText: 'Email'),
                   ),
-                  SizedBox(height: 12.0),
+                  const SizedBox(height: 12.0),
                   TextField(
                     controller: _passwordController,
-                    decoration: InputDecoration(labelText: 'Password'),
+                    decoration: const InputDecoration(labelText: 'Password'),
                     obscureText: true,
                   ),
-                  SizedBox(height: 12.0),
+                  const SizedBox(height: 12.0),
                   TextField(
                     controller: _usernameController,
-                    decoration: InputDecoration(labelText: 'Username'),
+                    decoration: const InputDecoration(labelText: 'Username'),
                   ),
-                  SizedBox(height: 12.0),
+                  const SizedBox(height: 12.0),
                   TextField(
                     controller: _fullNameController,
-                    decoration: InputDecoration(labelText: 'Full Name'),
+                    decoration: const InputDecoration(labelText: 'Full Name'),
                   ),
-                  SizedBox(height: 12.0),
+                  const SizedBox(height: 12.0),
                   TextField(
                     controller: _dateOfBirthController,
-                    readOnly:
-                        true, // Make the field read-only to prevent manual editing
+                    readOnly: true,
+                    // Make the field read-only to prevent manual editing
                     decoration: InputDecoration(
                         labelText: 'Date of Birth (YYYY-MM-DD)',
                         suffixIcon: IconButton(
-                            icon: Icon(Icons.calendar_today),
+                            icon: const Icon(Icons.calendar_today),
                             onPressed: () => _selectDate(
                                 context) // Call function to show date picker
                             )),
                   ),
-                  SizedBox(height: 12.0),
+                  const SizedBox(height: 12.0),
                   TextField(
                     controller: _phoneNumberController,
-                    decoration: InputDecoration(labelText: 'Phone Number'),
+                    decoration:
+                        const InputDecoration(labelText: 'Phone Number'),
                     keyboardType:
                         TextInputType.phone, // Set keyboard type to phone
                   ),
-                  SizedBox(height: 12.0),
+                  const SizedBox(height: 12.0),
                   TextField(
                     controller: _addressController,
-                    decoration: InputDecoration(labelText: 'Address'),
+                    decoration: const InputDecoration(labelText: 'Address'),
                   ),
-                  SizedBox(height: 12.0),
-                  TextField(
-                    controller: _roleController,
-                    decoration: InputDecoration(labelText: 'Role/Permissions'),
-                  ),
-                  SizedBox(height: 16.0),
+                  const SizedBox(height: 16.0),
                   ElevatedButton(
                     onPressed: _selectProfilePicture,
-                    child: Text('Select Profile Picture'),
+                    child: const Text('Select Profile Picture'),
                   ),
-                  SizedBox(height: 12.0),
+                  const SizedBox(height: 12.0),
                   _profilePicture != null
                       ? Image.file(_profilePicture!)
-                      : SizedBox(),
-                  SizedBox(height: 16.0),
+                      : const SizedBox(),
+                  const SizedBox(height: 16.0),
                   ElevatedButton(
                     onPressed: _signUp,
-                    child: Text('Sign Up'),
+                    child: const Text('Sign Up'),
                   ),
                 ],
               ),
@@ -168,24 +162,19 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   _signUp() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() {});
     UserCredential?
         userCredential; // Declare userCredential outside the try-catch block
 
     try {
-      setState(() {
-        _isLoading = true;
-      });
+      setState(() {});
 
       if (!_validateForm(_emailController, _passwordController,
           _usernameController, _fullNameController, context)) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() {});
         return;
       }
+
       userCredential = await _auth.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
@@ -222,7 +211,8 @@ class _SignUpPageState extends State<SignUpPage> {
 
 // Get the users collection
       final usersCollection = _firestore.collection(collectionName);
-
+      String passwordEncrypted = await encryptDecryptText(
+          _passwordController.text.trim(), EncryptionMode.encrypt);
 // Create or update user document
       await usersCollection
           .doc('users')
@@ -261,21 +251,19 @@ class _SignUpPageState extends State<SignUpPage> {
         context: context,
         builder: (context) {
           return AlertDialog(
-            title: Text('Sign Up Failed'),
+            title: const Text('Sign Up Failed'),
             content: Text(e.toString()),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: Text('OK'),
+                child: const Text('OK'),
               ),
             ],
           );
         },
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() {});
     }
   }
 }
@@ -290,7 +278,7 @@ void showMessageDialog(BuildContext context, String title, String message) {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('OK'),
+            child: const Text('OK'),
           ),
         ],
       );
@@ -327,12 +315,12 @@ bool _validateForm(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Validation Error'),
-          content: Text('Password must be at least 6 characters long.'),
+          title: const Text('Validation Error'),
+          content: const Text('Password must be at least 6 characters long.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('OK'),
+              child: const Text('OK'),
             ),
           ],
         );

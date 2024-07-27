@@ -5,10 +5,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'HomePage.dart';
 import 'auth/signin_page.dart';
+import 'firebase_options.dart';
+import 'notifications/NotificationsAPI.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await NotificationsAPI().initNotifications();
   runApp(MyApp());
 }
 

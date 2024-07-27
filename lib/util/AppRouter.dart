@@ -9,7 +9,6 @@ import '../auth/signup_page.dart';
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     // Extract route name and arguments
-    final args = settings.arguments;
 
     switch (settings.name) {
       case '/home':
