@@ -9,8 +9,8 @@ class SlideRightRoute extends PageRouteBuilder {
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return SlideTransition(
               position: Tween<Offset>(
-                begin: Offset(1.0, 0.0),
-                end: Offset(0.0, 0.0),
+                begin: const Offset(1.0, 0.0),
+                end: const Offset(0.0, 0.0),
               ).animate(animation),
               child: child,
             );

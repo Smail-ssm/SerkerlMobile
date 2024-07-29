@@ -1,10 +1,9 @@
-import 'package:ebike/Notfoiuund.dart';
-import 'package:ebike/splashscreen.dart';
-import 'package:flutter/material.dart';
+import 'package:ebike/util/Notfoiuund.dart';
+ import 'package:flutter/material.dart';
 
-import '../HomePage.dart';
-import '../auth/signin_page.dart';
-import '../auth/signup_page.dart';
+import '../pages/Map.dart';
+import '../pages/signin_page.dart';
+ import '../pages/signup_page.dart';
 
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -12,17 +11,16 @@ class AppRouter {
 
     switch (settings.name) {
       case '/home':
-        return MaterialPageRoute(builder: (_) => HomePage());
+        return MaterialPageRoute(builder: (_) => const MapPage( ));
       case '/signin':
-        return MaterialPageRoute(builder: (_) => SignInPage());
+        return MaterialPageRoute(builder: (_) => const SignInPage());
       case '/signup':
-        return MaterialPageRoute(builder: (_) => SignUpPage());
-      case '/splash':
-        return MaterialPageRoute(builder: (_) => SplashScreen());
+        return MaterialPageRoute(builder: (_) => const SignUpPage());
+
       // Add more routes as needed
       default:
         // If route not found, navigate to a default page or show an error
-        return MaterialPageRoute(builder: (_) => Notfound());
+        return MaterialPageRoute(builder: (_) => const NotFoundRout());
     }
   }
 

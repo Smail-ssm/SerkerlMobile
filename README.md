@@ -1,4 +1,5 @@
 # E-Bike and E-Scooter Rental App
+# SERKEL 🔃
 
 ## Overview
 This is a mobile application designed to facilitate the rental of e-bikes and e-scooters. Users can register, authenticate, discover nearby vehicles, book them, track their location in real-time, unlock them using QR code scanning, make in-app payments, manage their profiles, receive notifications, access safety features, provide feedback, view ride history and statistics, and navigate using integrated maps.

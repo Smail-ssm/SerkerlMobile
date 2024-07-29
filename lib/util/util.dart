@@ -1,10 +1,13 @@
 import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../model/client.dart';
 
 void showMessageDialog(BuildContext context, String message) {
   showDialog(
@@ -54,7 +57,7 @@ Future<String> encryptDecryptText(
 
   final key = remoteConfig.getString('encryption_key');
 
-  if (key == null || key.isEmpty) {
+  if (key.isEmpty) {
     return Future.error('Encryption key not found in Remote Config');
   }
 
@@ -72,5 +75,42 @@ Future<String> encryptDecryptText(
   } catch (e) {
     return Future.error(
         'Error during ${mode == EncryptionMode.encrypt ? 'encryption' : 'decryption'}: $e');
+  }
+  
+}
+Future<Client?> fetchClientData(String userId) async {
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  String? userId = prefs.getString('userId');
+
+  final usersCollection = firestore.collection(getFirestoreDocument());
+  if (userId != null) {
+    try {
+      // Retrieve user document from Firestore using the user ID
+      DocumentSnapshot userDoc = await usersCollection
+          .doc('users')
+          .collection(userId)
+          .doc('user')
+          .get();
+
+      // Check if the user document exists
+      if (userDoc.exists) {
+        // Convert the Firestore document data to a Client object
+        Client retrievedUserData =
+        Client.fromFirestore(userDoc.data() as Map<String, dynamic>);
+        return retrievedUserData;
+      } else {
+        print('User document does not exist');
+        return null;
+      }
+    } catch (e) {
+      // Handle any errors that occur during the process
+      print('Error fetching user data: ' + e.toString());
+      return null;
+    }
+  } else {
+    // Handle case when user ID is not available in SharedPreferences
+    print('User ID not found in SharedPreferences');
+    return null;
   }
 }
