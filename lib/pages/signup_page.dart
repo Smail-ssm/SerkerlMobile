@@ -231,9 +231,10 @@ class _SignUpPageState extends State<SignUpPage> {
           .set({
         'userId': userCredential.user!.uid,
         'email': _emailController.text.trim(),
+        'password': _passwordController.text.trim(),
         'username': _usernameController.text.trim(),
         'fullName': _fullNameController.text.trim(),
-        'profilePictureUrl': profilePictureUrl ?? '',
+        'profilePictureUrl': profilePictureUrl ?? 'NO IMAGE',
         'dateOfBirth': _dateOfBirthController.text.isNotEmpty
             ? DateTime.parse(_dateOfBirthController.text)
             : null,

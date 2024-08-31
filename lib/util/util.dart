@@ -1,5 +1,7 @@
 import 'dart:convert';
-
+import 'dart:ui' as ui;
+import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:firebase_remote_config/firebase_remote_config.dart';
@@ -8,7 +10,20 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../model/client.dart';
-
+import '../model/vehicule.dart';
+BitmapDescriptor getMarkerIconForVehicle(
+    Vehicle vehicle,
+    BitmapDescriptor scooterIcon,
+    BitmapDescriptor ebikeIcon,
+    ) {
+  if (vehicle.model.toLowerCase().contains('scooter')) {
+    return scooterIcon;
+  } else if (vehicle.model.toLowerCase().contains('ebike')) {
+    return ebikeIcon;
+  } else {
+    return BitmapDescriptor.defaultMarker; // Fallback if no model matches
+  }
+}
 void showMessageDialog(BuildContext context, String message) {
   showDialog(
     context: context,
@@ -78,12 +93,41 @@ Future<String> encryptDecryptText(
   }
   
 }
+Future<Client?> fetchClientDataByEmail(String email) async {
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
+  final usersCollection = firestore.collection(getFirestoreDocument());
+
+  try {
+    // Retrieve user document from Firestore using the user email
+    QuerySnapshot querySnapshot = await usersCollection
+        .doc('users')
+        .collection('email')
+        .where('email', isEqualTo: email)
+        .get();
+
+    // Check if any document matches the query
+    if (querySnapshot.docs.isNotEmpty) {
+      DocumentSnapshot userDoc = querySnapshot.docs.first;
+      Client retrievedUserData =
+      Client.fromFirestore(userDoc.data() as Map<String, dynamic>);
+      return retrievedUserData;
+    } else {
+      print('User document does not exist for email');
+      return null;
+    }
+  } catch (e) {
+    // Handle any errors that occur during the process
+    print('Error fetching user data by email: ' + e.toString());
+    return null;
+  }
+}
+
 Future<Client?> fetchClientData(String userId) async {
   FirebaseFirestore firestore = FirebaseFirestore.instance;
   SharedPreferences prefs = await SharedPreferences.getInstance();
-  String? userId = prefs.getString('userId');
 
   final usersCollection = firestore.collection(getFirestoreDocument());
+
   if (userId != null) {
     try {
       // Retrieve user document from Firestore using the user ID
@@ -105,7 +149,7 @@ Future<Client?> fetchClientData(String userId) async {
       }
     } catch (e) {
       // Handle any errors that occur during the process
-      print('Error fetching user data: ' + e.toString());
+      print('Error fetching user data by user ID: ' + e.toString());
       return null;
     }
   } else {
@@ -113,4 +157,63 @@ Future<Client?> fetchClientData(String userId) async {
     print('User ID not found in SharedPreferences');
     return null;
   }
+}
+
+Future<BitmapDescriptor> createCustomIcon(IconData iconData, Color color) async {
+  final size = 150.0;
+  final pictureRecorder = ui.PictureRecorder();
+  final canvas = Canvas(pictureRecorder, Rect.fromPoints(
+    Offset(0.0, 0.0),
+    Offset(size, size),
+  ));
+
+  final paint = Paint()
+    ..color = color
+    ..style = PaintingStyle.fill;
+
+  final iconPainter = IconPainter(iconData, color, size);
+  iconPainter.paint(canvas, Size(size, size));
+
+  final picture = pictureRecorder.endRecording();
+  final img = await picture.toImage(size.toInt(), size.toInt());
+  final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+  final buffer = byteData!.buffer.asUint8List();
+
+  return BitmapDescriptor.fromBytes(buffer);
+}
+
+class IconPainter extends CustomPainter {
+  final IconData iconData;
+  final Color color;
+  final double size;
+
+  IconPainter(this.iconData, this.color, this.size);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: String.fromCharCode(iconData.codePoint),
+        style: TextStyle(
+          fontSize: this.size / 2,
+          fontFamily: iconData.fontFamily,
+          color: color,
+        ),
+      ),
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+    );
+
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(
+        (size.width - textPainter.width) / 2,
+        (size.height - textPainter.height) / 2,
+      ),
+    );
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

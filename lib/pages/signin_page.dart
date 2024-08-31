@@ -5,6 +5,7 @@ import 'package:flutter_signin_button/button_view.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../model/client.dart';
 import 'Map.dart';
 import '../util/util.dart';
 import 'ResetPassword.dart';
@@ -22,6 +23,7 @@ class _SignInPageState extends State<SignInPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
+  Client? client;
 
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
@@ -69,7 +71,7 @@ class _SignInPageState extends State<SignInPage> {
                             child: SizedBox(
                               height: 200,
                               width: 200,
-                              child: SvgPicture.asset("assets/logo.svg"),
+                              child: Image.asset("assets/logo.png"),
                             ),
                           ),
                           TextField(
@@ -166,12 +168,13 @@ class _SignInPageState extends State<SignInPage> {
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
+      final client = await fetchClientData(userCredential.user!.uid);
 
       saveSP('userId', userCredential.user!.uid);
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => const MapPage(),
+          builder: (context) =>   MapPage(client: client),
         ),
       );
     } catch (e) {

@@ -37,7 +37,7 @@ class Client {
       email: data['email'] as String,
       username: data['username'] as String,
       fullName: data['fullName'] as String,
-      profilePictureUrl: data['profilePictureUrl'] as String,
+      profilePictureUrl: data['profilePictureUrl'] as String? ?? '', // Allow null profile picture URL
       dateOfBirth: (data['dateOfBirth'] as Timestamp).toDate(),
       phoneNumber: data['phoneNumber'] as String,
       address: data['address'] as String,

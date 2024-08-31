@@ -1,0 +1,186 @@
+{
+  "serkel": "SERKEL 🔃",
+  "seenonboarding": "شاهدOnboarding",
+  "userid": "معرف_المستخدم",
+  "errorFetchingClientData": "خطأ في جلب بيانات العميل: e",
+  "locationServicesAreDisabled": "خدمات الموقع غير مفعلّة.",
+  "locationPermissionsAreDenied": "أذونات الموقع مرفوضة",
+  "cancel": "إلغاء",
+  "openSettings": "فتح الإعدادات",
+  "editProfile": "تعديل الملف الشخصي",
+  "personalInformation": "معلومات شخصية",
+  "username": "اسم المستخدم",
+  "fullName": "الاسم الكامل",
+  "phoneNumber": "رقم الهاتف",
+  "address": "العنوان",
+  "label": "تسمية",
+  "edited": "تم التعديل",
+  "true": "صحيح",
+  "users": "المستخدمين",
+  "client": "العميل",
+  "clientProfile": "ملف العميل",
+  "noClientDataAvailable": "لا توجد بيانات للعميل",
+  "email": "البريد الإلكتروني",
+  "role": "الدور",
+  "creationDate": "تاريخ الإنشاء",
+  "noImage": "لا صورة",
+  "feedback": "ملاحظات",
+  "enterYourFeedback": "أدخل ملاحظاتك",
+  "addPictureOptional": "أضف صورة (اختياري)",
+  "enterYourEmail": "أدخل بريدك الإلكتروني",
+  "submit": "إرسال",
+  "feedbackSubmitted": "تم إرسال الملاحظات: ",
+  "tunisCityCenter": "مركز مدينة تونس",
+  "laMarsaBeach": "شاطئ المرسى",
+  "carthageRuins": "أطلال قرطاج",
+  "bardoMuseum": "متحف باردو",
+  "rideHistory": "تاريخ الرحلات",
+  "logout": "تسجيل الخروج",
+  "areYouSureYouWantToLogout": "هل أنت متأكد أنك تريد تسجيل الخروج؟",
+  "clientprofilepagedart": "ClientProfilePage.dart",
+  "historydart": "History.dart",
+  "closeBottomsheet": "إغلاق BottomSheet",
+  "removeMarker": "إزالة العلامة",
+  "locationPermissionsArePermanentlyDenied": "أذونات الموقع مرفوضة بشكل دائم",
+  "nogoZone": "منطقة محظورة",
+  "llStopYourVehicleAndYouRiskaFine": "سيتعين عليك إيقاف مركبتك وتعرضك لغرامة.",
+  "lowspeedZone": "منطقة سرعة منخفضة",
+  "noparkZone": "منطقة ممنوع الوقوف",
+  "toAvoidaParkingFineEndYourRideOutsideOfGrayAreas": "لتجنب غرامة وقوف السيارات، انهِ رحلتك خارج المناطق الرمادية.",
+  "scooterParking": "موقف السكوتر",
+  "parkScootersInCircleSpotsOrDiamondForAllVehiclesInBlueAreas": "ركن السكوترات في الأماكن الدائرية، أو الماس لجميع المركبات في المناطق الزرقاء.",
+  "bikeParking": "موقف الدراجات",
+  "parkBikesInSquareSpotsOrDiamondForAllVehiclesInBlueAreas": "ركن الدراجات في الأماكن المربعة، أو الماس لجميع المركبات في المناطق الزرقاء.",
+  "balance": "رصيد",
+  "subscriptions": "الاشتراكات",
+  "notifications": "الإشعارات",
+  "support": "الدعم",
+  "language": "اللغة",
+  "profile": "الملف الشخصي",
+  "share": "مشاركة",
+  "guest": "ضيف",
+  "noEmail": "لا بريد إلكتروني",
+  "tutorial": "دليل",
+  "findaScooter": "ابحث عن سكوتر",
+  "instructions": "تعليمات",
+  "stepsOnFindingaScooterNearYou": "خطوات للعثور على سكوتر قريب منك.",
+  "startRide": "بدء الرحلة",
+  "unlockScooter": "فتح السكوتر",
+  "scanTheQrCodeToStartYourRide": "امسح رمز QR لبدء رحلتك.",
+  "endRide": "إنهاء الرحلة",
+  "parking": "موقف",
+  "locateaDesignatedParkingSpot": "حدد موقع موقف مخصص.",
+  "takePhoto": "خذ صورة",
+  "takeaPhotoOfTheParkedScooter": "التقط صورة للسكوتر المتوقف.",
+  "endRideConfirmation": "تأكيد إنهاء الرحلة",
+  "confirmRideCompletionInTheApp": "أكد إتمام الرحلة في التطبيق.",
+  "zonesOnTheMap": "المناطق على الخريطة",
+  "greenZone": "المنطقة الخضراء",
+  "ridingAllowed": "الركوب مسموح.",
+  "redZone": "المنطقة الحمراء",
+  "noRidingAllowed": "الركوب ممنوع.",
+  "yellowZone": "المنطقة الصفراء",
+  "reducedSpeedZone": "منطقة سرعة منخفضة.",
+  "greyZone": "المنطقة الرمادية",
+  "scooterUnavailableInThisArea": "السكوتر غير متاح في هذه المنطقة.",
+  "faqs": "الأسئلة المتكررة",
+  "commonQuestions": "الأسئلة الشائعة",
+  "findAnswersToFrequentlyAskedQuestions": "اعثر على إجابات للأسئلة الشائعة.",
+  "troubleshooting": "استكشاف الأخطاء وإصلاحها",
+  "paymentIssues": "مشاكل الدفع",
+  "stepsToResolvePaymentProblems": "خطوات لحل مشاكل الدفع.",
+  "scooterUnavailable": "السكوتر غير متاح",
+  "whatToDoIfaScooterIsUnavailable": "ماذا تفعل إذا كان السكوتر غير متاح.",
+  "contactUs": "اتصل بنا",
+  "supportebikecom": "support@Ebike.com",
+  "phone": "هاتف",
+  "helpCenter": "مركز المساعدة",
+  "visitOurHelpCenter": "زر مركز المساعدة لدينا",
+  "detailedGuidesAndTutorials": "أدلة مفصلة ودروس تعليمية.",
+  "communityForum": "منتدى المجتمع",
+  "joinTheCommunity": "انضم إلى المجتمع",
+  "connectWithOtherUsersAndGetHelp": "اتصل بمستخدمين آخرين واحصل على المساعدة.",
+  "qr": "QR",
+  "scanOrEnterCode": "امسح أو أدخل الرمز",
+  "enterCodeManually": "أدخل الرمز يدويًا",
+  "ok": "موافق",
+  "welcomeToOurApp": "مرحبا بك في تطبيقنا",
+  "thisIsAnAwesomeAppThatHelpsYouWithXYAndZ": "هذا تطبيق رائع يساعدك في X و Y و Z.",
+  "easyToUse": "سهل الاستخدام",
+  "ourAppIsDesignedToBeUserfriendlyAndEasyToNavigate": "تطبيقنا مصمم ليكون سهل الاستخدام وسهل التصفح.",
+  "getStarted": "ابدأ",
+  "signUpAndStartUsingTheAppRightAway": "سجل وابدأ استخدام التطبيق على الفور!",
+  "skip": "تخطي",
+  "next": "التالي",
+  "done": "تم",
+  "pricing": "الأسعار",
+  "payPerRide": "الدفع لكل رحلة",
+  "bicycles": "الدراجات",
+  "ebikes": "الدراجات الكهربائية",
+  "scooters": "السكوترات",
+  "memberships": "العضويات",
+  "hideDetails": "إخفاء التفاصيل",
+  "checkOutOurMonthlyPlansAndOurDay": "اطلع على خططنا الشهرية ويومنا",
+  "resetPassword": "إعادة تعيين كلمة المرور",
+  "emailOrMobileNumber": "البريد الإلكتروني أو رقم الهاتف",
+  "passwordResetEmailSentToemail": "تم إرسال بريد إعادة تعيين كلمة المرور إلى البريد الإلكتروني",
+  "passwordResetFailed": "فشل في إعادة تعيين كلمة المرور: e",
+  "languagecode": "رمز_اللغة",
+  "settings": "الإعدادات",
+  "english": "الإنجليزية",
+  "en": "en",
+  "us": "US",
+  "french": "الفرنسية",
+  "fr": "fr",
+  "arabic": "العربية",
+  "ar": "ar",
+  "dz": "DZ",
+  "mapdart": "Map.dart",
+  "resetpassworddart": "ResetPassword.dart",
+  "password": "كلمة المرور",
+  "signIn": "تسجيل الدخول",
+  "forgotPasswordResetIt": "نسيت كلمة المرور؟ أعد تعيينها",
+  "signInFailed": "فشل تسجيل الدخول",
+  "errorSigningInWithGoogle": "خطأ في تسجيل الدخول باستخدام Google: e",
+  "error": "خطأ",
+  "failedToSignInWithGooglePleaseTryAgainLater": "فشل في تسجيل الدخول باستخدام Google. يرجى المحاولة لاحقًا.",
+  "signUp": "التسجيل",
+  "dateOfBirthYyyymmdd": "تاريخ الميلاد (YYYY-MM-DD)",
+  "selectProfilePicture": "اختر صورة الملف الشخصي",
+  "yyyymmdd": "yyyy-MM-dd",
+  "invalidCollectionNameReturnedByGetfirestoredocument": "اسم المجموعة غير صالح تم إرجاعه بواسطة getFirestoreDocument()",
+  "user": "مستخدم",
+  "signUpFailed": "فشل التسجيل",
+  "validationError": "خطأ في التحقق",
+  "pleaseEnteraValidEmailAddress": "يرجى إدخال عنوان بريد إلكتروني صالح",
+  "passwordMustBeAtLeast6CharactersLong": "يجب أن يكون طول كلمة المرور 6 أحرف على الأقل.",
+  "tn": "TN",
+  "message": "رسالة",
+  "preprod": "preprod",
+  "prod": "prod",
+  "encryptionKeyNotFoundInRemoteConfig": "مفتاح التشفير غير موجود في التكوين البعيد",
+  "userDocumentDoesNotExistForEmail": "مستند المستخدم غير موجود للبريد الإلكتروني",
+  "errorFetchingUserDataByEmail": "خطأ في جلب بيانات المستخدم عبر البريد الإلكتروني",
+  "userDocumentDoesNotExist": "مستند المستخدم غير موجود",
+  "errorFetchingUserDataByUserId": "خطأ في جلب بيانات المستخدم عبر ID المستخدم",
+  "userIdNotFoundInSharedpreferences": "معرف المستخدم غير موجود في SharedPreferences",
+  "notificationitemdart": "NotificationItem.dart",
+  "notificationcarddart": "NotificationCard.dart",
+  "notificationsapidart": "NotificationsAPI.dart",
+  "noNotificationsYet": "لا توجد إشعارات بعد",
+  "delete": "حذف",
+  "getFreeRides": "احصل على رحلات مجانية",
+  "spreadTheLove": "انشر الحب",
+  "get1xFree20MinRide": "احصل على رحلة مجانية واحدة مدتها 20 دقيقة!",
+  "hideHowItWorks": "إخفاء كيفية عمله",
+  "showHowItWorks": "عرض كيفية عمله",
+  "inviteFriendsBySharingYourCode": "ادعُ الأصدقاء بمشاركة رمزك",
+  "theySignUpWithYourSharedLinkOrByPastingThePromoCodeBelowIntoTheApp": "يسجلون باستخدام الرابط المشترك الخاص بك أو عن طريق لصق رمز العرض أدناه في التطبيق",
+  "theyHitTheRoadWithDott": "ينطلقون مع Dott",
+  "theyEnjoy1xFree20MinRideUnlockIncluded": "يستمتعون برحلة مجانية واحدة مدتها 20 دقيقة، مع فتح القفل مشمول",
+  "youEarnFreeRides": "أنت تكسب رحلات مجانية!",
+  "youGet1xFree20MinRideJustLikeYourFriend": "تحصل على رحلة مجانية واحدة مدتها 20 دقيقة، تمامًا مثل صديقك",
+  "shareWithFriends": "مشاركة مع الأصدقاء",
+  "vehicleTypes": "أنواع المركبات",
+  "bikes": "دراجات"
+}

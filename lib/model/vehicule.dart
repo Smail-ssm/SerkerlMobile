@@ -1,21 +1,19 @@
 import 'DeviceInfo.dart';
 import 'MaintenanceLog.dart';
-
-import 'rental.dart'; // Import the Rental class
-// Import the Model class
+import 'rental.dart';
 
 class Vehicle {
   String id; // Unique identifier for the vehicle
   String model; // Model of the vehicle
-  int batteryID; // Battery ID or percentage
+  String batteryID; // Battery ID or percentage
   bool isAvailable; // Availability status of the vehicle
   double? latitude; // Latitude of the vehicle's location (optional)
   double? longitude; // Longitude of the vehicle's location (optional)
   Rental? rental; // Current rental information (optional)
   DeviceInfo? deviceInfo; // Device information (optional)
-  double? speed; // Current speed (optional)
-  double? temperature; // Internal temperature (optional)
-  double? acceleration; // Current acceleration (optional)
+  int? speed; // Current speed (optional)
+  int? temperature; // Internal temperature (optional)
+  int? acceleration; // Current acceleration (optional)
   DateTime? nextMaintenanceDate; // Scheduled maintenance date (optional)
   List<MaintenanceLog>? maintenanceLog; // Maintenance logs (optional)
   String? user; // User associated with the vehicle (optional)
@@ -46,22 +44,24 @@ class Vehicle {
       model: json['model'],
       batteryID: json['batteryID'],
       isAvailable: json['isAvailable'],
-      latitude: json['latitude']?.toDouble(),
-      longitude: json['longitude']?.toDouble(),
-      rental: json['rental'] != null ? Rental.fromJson(json['rental']) : null,
-      deviceInfo: json['deviceInfo'] != null
+      latitude: json['latitude'],
+      longitude: json['longitude'],
+      rental: json['rental'] is Map<String, dynamic>
+          ? Rental.fromJson(json['rental'])
+          : null,
+      deviceInfo: json['deviceInfo'] is Map<String, dynamic>
           ? DeviceInfo.fromJson(json['deviceInfo'])
           : null,
-      speed: json['speed']?.toDouble(),
-      temperature: json['temperature']?.toDouble(),
-      acceleration: json['acceleration']?.toDouble(),
+      speed: json['speed']as int,
+      temperature: json['temperature'] ,
+      acceleration: json['acceleration'] ,
       nextMaintenanceDate: json['nextMaintenanceDate'] != null
           ? DateTime.parse(json['nextMaintenanceDate'])
           : null,
-      maintenanceLog: json['maintenanceLog'] != null
+      maintenanceLog: json['maintenanceLog']is Map<String, dynamic>
           ? (json['maintenanceLog'] as List)
-              .map((log) => MaintenanceLog.fromJson(log))
-              .toList()
+          .map((log) => MaintenanceLog.fromJson(log))
+          .toList()
           : null,
       user: json['user'],
       qrcode: json['qrcode'],

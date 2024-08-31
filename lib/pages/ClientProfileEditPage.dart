@@ -31,8 +31,7 @@ class _UserProfileEditPageState extends State<UserProfileEditPage> {
     super.initState();
     _usernameController = TextEditingController(text: widget.client!.username);
     _fullNameController = TextEditingController(text: widget.client!.fullName);
-    _phoneNumberController =
-        TextEditingController(text: widget.client!.phoneNumber);
+    _phoneNumberController = TextEditingController(text: widget.client!.phoneNumber);
     _addressController = TextEditingController(text: widget.client!.address);
   }
 
@@ -51,34 +50,19 @@ class _UserProfileEditPageState extends State<UserProfileEditPage> {
       body: Stack(
         children: [
           SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Stack(
-                    alignment: Alignment.bottomRight,
-                    children: [
-                      CircleAvatar(
-                        radius: 40,
-                        backgroundImage: NetworkImage(
-                            widget.client!.profilePictureUrl ?? ''),
-                        child: Text(widget.client!.username[0].toUpperCase())
-                            ,
-                      ),
-                      IconButton(
-                        onPressed: _pickImage,
-                        icon: const Icon(Icons.edit),
-                      ),
-                    ],
-                  ),
-                  _buildTextField('Username:', _usernameController),
-                  _buildTextField('Full Name:', _fullNameController),
-                  _buildTextField('Phone Number:', _phoneNumberController),
-                  _buildTextField('Address:', _addressController),
-                ],
-              ),
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildUserAvatar(widget.client?.profilePictureUrl),
+                const SizedBox(height: 16),
+                _buildSectionHeader('Personal Information'),
+                const Divider(),
+                _buildEditableUserInfoRow('Username', _usernameController),
+                _buildEditableUserInfoRow('Full Name', _fullNameController),
+                _buildEditableUserInfoRow('Phone Number', _phoneNumberController),
+                _buildEditableUserInfoRow('Address', _addressController),
+              ],
             ),
           ),
           if (_isLoading)
@@ -93,30 +77,71 @@ class _UserProfileEditPageState extends State<UserProfileEditPage> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: controller,
-                onChanged: (_) => _isUserInfoChanged = true,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
+  Widget _buildUserAvatar(String? profilePictureUrl) {
+    return Center(
+      child: Stack(
+        children: [
+          CircleAvatar(
+            radius: 50,
+            backgroundImage: _profilePicture != null
+                ? FileImage(_profilePicture!)
+                : (profilePictureUrl != null && profilePictureUrl.isNotEmpty)
+                ? NetworkImage(profilePictureUrl) as ImageProvider
+                : const AssetImage('assets/default_avatar.png'),
+            child: _profilePicture == null && (profilePictureUrl == null || profilePictureUrl.isEmpty)
+                ? const Icon(Icons.person, size: 50)
+                : null,
           ),
-        ),
-      ],
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: IconButton(
+              onPressed: _pickImage,
+              icon: const Icon(Icons.camera_alt, color: Colors.white),
+              padding: const EdgeInsets.all(5.0),
+              constraints: const BoxConstraints(),
+              color: Colors.black.withOpacity(0.7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Text(
+        title,
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildEditableUserInfoRow(String label, TextEditingController controller) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$label:',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: controller,
+            onChanged: (_) => _isUserInfoChanged = true,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.blue),
+              ),
+              contentPadding: EdgeInsets.symmetric(horizontal: 10),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -172,11 +197,11 @@ class _UserProfileEditPageState extends State<UserProfileEditPage> {
   }
 
   Future<void> _pickImage() async {
-    final pickedFile =
-        await ImagePicker().pickImage(source: ImageSource.gallery);
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
         _profilePicture = File(pickedFile.path);
+        _isUserInfoChanged = true; // Mark as changed after picking a new image
       });
     }
   }
