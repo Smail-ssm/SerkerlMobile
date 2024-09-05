@@ -6,7 +6,7 @@ import 'package:ebike/pages/FeedbackPage.dart';
 import 'package:ebike/pages/Pricing.dart';
 import 'package:ebike/pages/signin_page.dart';
 import 'package:ebike/services/VhService.dart';
-import 'package:ebike/widgets/NotificationsList.dart';
+import 'package:ebike/pages/NotificationsList.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
@@ -53,11 +53,12 @@ class _MapPageState extends State<MapPage> {
   Client? client; // User data
   GoogleMapController? _mapController;
   final scaffoldKey = GlobalKey<ScaffoldState>();
-  late LatLng currentLocation; // Store current location
+    late LatLng currentLocation; // Store current location
   bool isLoading = true; // Track loading state
   Set<Polygon> polygons = {}; // Set to store polygons
   final AreaService _areaService = AreaService();
   final Vehicleservice _vehicleService = Vehicleservice();
+  bool isLoadingLocation = true; // Track loading state
 
   @override
   void initState() {
@@ -79,20 +80,30 @@ class _MapPageState extends State<MapPage> {
   }
 
   Future<void> _initializeLocation() async {
+    // SharedPreferences prefs = await SharedPreferences.getInstance();
+    // double? storedLatitude = prefs.getDouble('latitude');
+    // double? storedLongitude = prefs.getDouble('longitude');
+    // currentLocation= LatLng(storedLatitude!, storedLongitude!);
+    // if( currentLocation ==null){
+    setState(() {
+      isLoadingLocation = true; // Start showing loading spinner
+    });
     try {
-      Position position = await Geolocator.getCurrentPosition();
-      setState(() {
-        currentLocation = LatLng(position.latitude, position.longitude);
-        isLoading = false; // Location fetched successfully
-      });
-      _moveCameraToCurrentLocation();
-    } catch (e) {
-      print('Error fetching location: $e');
-      setState(() {
-        isLoading = false; // Location fetch failed, stop loading
-      });
+        Position position = await Geolocator.getCurrentPosition();
+        setState(() {
+          currentLocation = LatLng(position.latitude, position.longitude);
+          isLoadingLocation = false; // Location fetched successfully
+        });
+        _moveCameraToCurrentLocation();
+      } catch (e) {
+        print('Error fetching location: $e');
+        setState(() {
+           isLoadingLocation = false; // Stop loading even if location fetch failed
+        });
+      }
     }
-  }
+
+  // }
 
   void _moveCameraToCurrentLocation() {
     if (_mapController != null) {
@@ -226,17 +237,21 @@ class _MapPageState extends State<MapPage> {
       key: scaffoldKey,
       drawer: _buildLeftDrawer(),
       endDrawer: _buildRightDrawer(),
-      body: currentLocation == null
-          ? const Center(child: CircularProgressIndicator())
-          : Stack(
+      body:   Stack(
               children: [
-                _buildGoogleMap(),
+                currentLocation != null
+                    ? _buildGoogleMap()
+                    : Container(),
                 menuButton(scaffoldKey: scaffoldKey),
                 InfoButton(scaffoldKey: scaffoldKey),
                 _buildCurrentLocationButton(),
                 _buildMapGuidButton(),
                 _buildScanCodeButton(),
                 _buildMapStyleButton(),
+                if (isLoadingLocation)
+                  const Center(
+                    child: CircularProgressIndicator(),
+                  ),
               ],
             ),
     );
@@ -246,7 +261,7 @@ class _MapPageState extends State<MapPage> {
     return GoogleMap(
       mapType: _currentMapType,
       initialCameraPosition: CameraPosition(
-        target: currentLocation,
+        target: currentLocation ?? LatLng(0, 0), // Fallback to (0,0) if location is not available
         zoom: 15.0,
       ),
       onMapCreated: (controller) {

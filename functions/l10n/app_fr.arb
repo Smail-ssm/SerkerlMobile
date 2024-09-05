@@ -166,7 +166,7 @@
   "userIdNotFoundInSharedpreferences": "ID utilisateur non trouvé dans les SharedPreferences",
   "notificationitemdart": "NotificationItem.dart",
   "notificationcarddart": "NotificationCard.dart",
-  "notificationsapidart": "NotificationsAPI.dart",
+  "NotificationServicedart": "NotificationService.dart",
   "noNotificationsYet": "Pas encore de notifications",
   "delete": "Supprimer",
   "getFreeRides": "Obtenez des trajets gratuits",

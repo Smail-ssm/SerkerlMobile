@@ -2,11 +2,14 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../model/client.dart';
 import '../util/util.dart';
+import 'package:path/path.dart' as path;
 
 class UserProfileEditPage extends StatefulWidget {
   final Client? client;
@@ -31,7 +34,8 @@ class _UserProfileEditPageState extends State<UserProfileEditPage> {
     super.initState();
     _usernameController = TextEditingController(text: widget.client!.username);
     _fullNameController = TextEditingController(text: widget.client!.fullName);
-    _phoneNumberController = TextEditingController(text: widget.client!.phoneNumber);
+    _phoneNumberController =
+        TextEditingController(text: widget.client!.phoneNumber);
     _addressController = TextEditingController(text: widget.client!.address);
   }
 
@@ -60,7 +64,8 @@ class _UserProfileEditPageState extends State<UserProfileEditPage> {
                 const Divider(),
                 _buildEditableUserInfoRow('Username', _usernameController),
                 _buildEditableUserInfoRow('Full Name', _fullNameController),
-                _buildEditableUserInfoRow('Phone Number', _phoneNumberController),
+                _buildEditableUserInfoRow(
+                    'Phone Number', _phoneNumberController),
                 _buildEditableUserInfoRow('Address', _addressController),
               ],
             ),
@@ -83,14 +88,23 @@ class _UserProfileEditPageState extends State<UserProfileEditPage> {
         children: [
           CircleAvatar(
             radius: 50,
-            backgroundImage: _profilePicture != null
-                ? FileImage(_profilePicture!)
-                : (profilePictureUrl != null && profilePictureUrl.isNotEmpty)
-                ? NetworkImage(profilePictureUrl) as ImageProvider
-                : const AssetImage('assets/default_avatar.png'),
-            child: _profilePicture == null && (profilePictureUrl == null || profilePictureUrl.isEmpty)
-                ? const Icon(Icons.person, size: 50)
-                : null,
+            backgroundColor: Colors.grey[200], // Set a background color
+            child: _profilePicture != null
+                ? ClipOval(
+              child: Image.file(
+                _profilePicture!,
+                width: 100,
+                height: 100,
+                fit: BoxFit.cover,
+              ),
+            )
+                : Icon(
+              profilePictureUrl != null && profilePictureUrl.isNotEmpty
+                  ? Icons.account_circle // Use a user icon if there is no image
+                  : Icons.person, // Default icon for no profile picture
+              size: 80,
+              color: Colors.grey[700], // You can adjust the color if necessary
+            ),
           ),
           Positioned(
             bottom: 0,
@@ -151,6 +165,18 @@ class _UserProfileEditPageState extends State<UserProfileEditPage> {
       return;
     }
 
+    setState(() {
+      _isLoading = true;
+    });
+
+    String? profilePictureUrl = widget.client!.profilePictureUrl;
+
+    // If the user selected a new profile picture, upload it
+    if (_profilePicture != null) {
+      profilePictureUrl =
+          await _uploadProfilePicture(_profilePicture!, widget.client!.userId);
+    }
+
     final updatedUser = Client(
       userId: widget.client!.userId,
       email: widget.client!.email,
@@ -159,17 +185,16 @@ class _UserProfileEditPageState extends State<UserProfileEditPage> {
       phoneNumber: _phoneNumberController.text.trim(),
       address: _addressController.text.trim(),
       role: widget.client!.role,
-      profilePictureUrl: widget.client!.profilePictureUrl,
+      profilePictureUrl: profilePictureUrl,
+      // Use the new or existing URL
       creationDate: widget.client!.creationDate,
       password: '',
+      fcmToken: await  getSP("fcmToken"),
       dateOfBirth: widget.client!.dateOfBirth,
     );
 
-    saveSP('edited', 'true');
-    setState(() {
-      _isLoading = true;
-    });
     await _updateUserInFirestore(updatedUser);
+
     setState(() {
       _isLoading = false;
     });
@@ -192,7 +217,7 @@ class _UserProfileEditPageState extends State<UserProfileEditPage> {
     await usersCollection
         .doc('users')
         .collection(updatedUser.userId)
-        .doc('client')
+        .doc('user')
         .update(updatedUserData);
   }
 
@@ -204,6 +229,28 @@ class _UserProfileEditPageState extends State<UserProfileEditPage> {
         _isUserInfoChanged = true; // Mark as changed after picking a new image
       });
     }
+  }
+
+  Future<String> _uploadProfilePicture(File profilePicture, String userId) async {
+    final FirebaseStorage _storage = FirebaseStorage.instance;
+    String documentPath = kDebugMode ? 'preprod' : 'prod';
+
+    // Extract the file extension from the original file
+    String fileExtension = path.extension(profilePicture.path);
+
+    // Create a reference to the location with the correct file extension
+    final storageRef = _storage.ref().child('$documentPath/profilePictures/$userId$fileExtension');
+
+    // Upload the file to Firebase Storage
+    UploadTask uploadTask = storageRef.putFile(profilePicture);
+
+    // Wait until the upload is complete
+    TaskSnapshot snapshot = await uploadTask;
+
+    // Get the download URL
+    String downloadUrl = await snapshot.ref.getDownloadURL();
+
+    return downloadUrl;
   }
 
   @override

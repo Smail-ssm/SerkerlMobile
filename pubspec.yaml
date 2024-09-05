@@ -31,13 +31,18 @@ dependencies:
   qr_code_scanner: ^1.0.1
   firebase_remote_config: ^4.3.8
   encrypt: ^5.0.3
-  firebase_messaging: ^14.7.10
+  firebase_messaging: ^14.9.4
   flutter_native_splash: ^2.3.7
   another_flutter_splash_screen: ^1.2.1
   intro_slider: ^3.0.0
   flutter_expandable_fab: ^2.2.0
   geocoding: ^3.0.0
   flutter_dotenv: ^5.1.0
+  animate_gradient: ^0.0.3
+  sqflite: ^2.3.3+1
+  path: ^1.9.0
+  flutter_local_notifications: ^17.2.2
+  checkout_screen_ui: ^1.0.1
 
 
 

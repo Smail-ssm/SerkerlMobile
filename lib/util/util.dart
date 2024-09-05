@@ -1,21 +1,22 @@
 import 'dart:convert';
 import 'dart:ui' as ui;
-import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../model/client.dart';
 import '../model/vehicule.dart';
+
 BitmapDescriptor getMarkerIconForVehicle(
-    Vehicle vehicle,
-    BitmapDescriptor scooterIcon,
-    BitmapDescriptor ebikeIcon,
-    ) {
+  Vehicle vehicle,
+  BitmapDescriptor scooterIcon,
+  BitmapDescriptor ebikeIcon,
+) {
   if (vehicle.model.toLowerCase().contains('scooter')) {
     return scooterIcon;
   } else if (vehicle.model.toLowerCase().contains('ebike')) {
@@ -24,6 +25,7 @@ BitmapDescriptor getMarkerIconForVehicle(
     return BitmapDescriptor.defaultMarker; // Fallback if no model matches
   }
 }
+
 void showMessageDialog(BuildContext context, String message) {
   showDialog(
     context: context,
@@ -49,6 +51,11 @@ String getFirestoreDocument() {
 Future<void> saveSP(String variable, String value) async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.setString(variable, value);
+}
+
+getSP(String variable) async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getString(variable);
 }
 
 // Method to check if an email address is valid
@@ -91,8 +98,8 @@ Future<String> encryptDecryptText(
     return Future.error(
         'Error during ${mode == EncryptionMode.encrypt ? 'encryption' : 'decryption'}: $e');
   }
-  
 }
+
 Future<Client?> fetchClientDataByEmail(String email) async {
   FirebaseFirestore firestore = FirebaseFirestore.instance;
   final usersCollection = firestore.collection(getFirestoreDocument());
@@ -109,7 +116,7 @@ Future<Client?> fetchClientDataByEmail(String email) async {
     if (querySnapshot.docs.isNotEmpty) {
       DocumentSnapshot userDoc = querySnapshot.docs.first;
       Client retrievedUserData =
-      Client.fromFirestore(userDoc.data() as Map<String, dynamic>);
+          Client.fromFirestore(userDoc.data() as Map<String, dynamic>);
       return retrievedUserData;
     } else {
       print('User document does not exist for email');
@@ -141,7 +148,7 @@ Future<Client?> fetchClientData(String userId) async {
       if (userDoc.exists) {
         // Convert the Firestore document data to a Client object
         Client retrievedUserData =
-        Client.fromFirestore(userDoc.data() as Map<String, dynamic>);
+            Client.fromFirestore(userDoc.data() as Map<String, dynamic>);
         return retrievedUserData;
       } else {
         print('User document does not exist');
@@ -159,13 +166,16 @@ Future<Client?> fetchClientData(String userId) async {
   }
 }
 
-Future<BitmapDescriptor> createCustomIcon(IconData iconData, Color color) async {
+Future<BitmapDescriptor> createCustomIcon(
+    IconData iconData, Color color) async {
   final size = 150.0;
   final pictureRecorder = ui.PictureRecorder();
-  final canvas = Canvas(pictureRecorder, Rect.fromPoints(
-    Offset(0.0, 0.0),
-    Offset(size, size),
-  ));
+  final canvas = Canvas(
+      pictureRecorder,
+      Rect.fromPoints(
+        Offset(0.0, 0.0),
+        Offset(size, size),
+      ));
 
   final paint = Paint()
     ..color = color

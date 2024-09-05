@@ -1,6 +1,11 @@
+import 'dart:io';
+import 'package:checkout_screen_ui/checkout_page/checkout_page.dart';
+import 'package:checkout_screen_ui/models/price_item.dart';
+import 'package:checkout_screen_ui/ui_components/pay_button.dart';
 import 'package:flutter/material.dart';
 import '../services/SubscriptionService.dart';
 import '../model/subscription.dart';
+import '../util/theme.dart';
 
 class PricingWidget extends StatefulWidget {
   const PricingWidget({Key? key}) : super(key: key);
@@ -14,6 +19,11 @@ class _PricingWidgetState extends State<PricingWidget> {
   final SubscriptionService _subscriptionService = SubscriptionService();
   List<Subscription> _subscriptions = [];
   bool _isLoading = true;
+
+  // GlobalKeys defined once to avoid conflicts
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final GlobalKey<CardPayButtonState> _payBtnKey =
+      GlobalKey<CardPayButtonState>();
 
   @override
   void initState() {
@@ -33,47 +43,45 @@ class _PricingWidgetState extends State<PricingWidget> {
       setState(() {
         _isLoading = false;
       });
-      print('Error fetching subscriptions: $e');
+      _showErrorDialog('Error fetching subscriptions');
     }
   }
 
   Future<void> _activatePlan(Subscription subscription) async {
     try {
       await _subscriptionService.activateSubscription(subscription.id);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Plan activated successfully!')),
-      );
+      _showSuccessDialog('Plan activated successfully!');
     } catch (e) {
-      print('Error activating plan: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to activate plan')),
-      );
+      _showErrorDialog('Failed to activate plan');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pricing'),
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildSectionTitle('Pay Per Ride'),
-              _buildPricingCard('E-bikes', '24/7', '1 € unlock + 0.26 €/min'),
-              _buildPricingCard('Scooters', '24/7', '1 € unlock + 0.26 €/min'),
-              _buildSectionTitle('Memberships'),
-              _buildSubscriptionButton(),
-              if (_showSubscriptionDetails)
-                _isLoading
-                    ? Center(child: CircularProgressIndicator())
-                    : _buildSubscriptionDetails(),
-              // Display subscription details if available
-            ],
+    return Theme(
+      data: lightTheme,  // Force light theme
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Pricing'),
+        ),
+        backgroundColor: Colors.white,  // Set background color to white
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSectionTitle('Pay Per Ride'),
+                _buildPricingCard('E-bikes', '24/7', '1 € unlock + 0.26 €/min'),
+                _buildPricingCard('Scooters', '24/7', '1 € unlock + 0.26 €/min'),
+                _buildSectionTitle('Memberships'),
+                _buildSubscriptionButton(),
+                if (_showSubscriptionDetails)
+                  _isLoading
+                      ? Center(child: CircularProgressIndicator())
+                      : _buildSubscriptionDetails(),
+              ],
+            ),
           ),
         ),
       ),
@@ -93,8 +101,8 @@ class _PricingWidgetState extends State<PricingWidget> {
     );
   }
 
-
-  Widget _buildPricingCard(String vehicleType, String availability, String price, {VoidCallback? onTap}) {
+  Widget _buildPricingCard(String vehicleType, String availability,
+      String price, {VoidCallback? onTap}) {
     return Card(
       elevation: 4, // Slightly more elevation for a more pronounced shadow
       shape: RoundedRectangleBorder(
@@ -187,93 +195,130 @@ class _PricingWidgetState extends State<PricingWidget> {
           subscription.title,
           '${subscription.validDays} days',
           '${subscription.price} €',
-          onTap: () => _showSubscriptionBottomSheet(subscription),
+           onTap: () => _showCheckoutScreen(subscription),
         );
       }).toList(),
     );
   }
-  void _showSubscriptionBottomSheet(Subscription subscription) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true, // Allows the bottom sheet to resize to fit the content
-      builder: (BuildContext context) {
-        return Wrap( // Wrap ensures the bottom sheet sizes itself based on its content
-          children: [
-            Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min, // Ensures the Column only takes up as much height as it needs
-                  children: [
-                    Text(
-                      subscription.title,
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    Text('Company: ${subscription.company}', style: TextStyle(fontSize: 18)),
-                    const SizedBox(height: 8),
-                    Text('Activated: ${subscription.activated ? 'Yes' : 'No'}', style: TextStyle(fontSize: 18)),
-                    const SizedBox(height: 8),
-                    Text('Price: ${subscription.price} €', style: TextStyle(fontSize: 18)),
-                    const SizedBox(height: 8),
-                    Text('Valid for: ${subscription.validDays} days', style: TextStyle(fontSize: 18)),
-                    const SizedBox(height: 8),
-                    Text('Unlocks Count: ${subscription.unlocksCount}', style: TextStyle(fontSize: 18)),
-                    const SizedBox(height: 8),
-                    Text('Ride Minutes: ${subscription.rideMinutes}', style: TextStyle(fontSize: 18)),
-                    const SizedBox(height: 8),
-                    Text('Pause Minutes: ${subscription.pauseMinutes}', style: TextStyle(fontSize: 18)),
-                    const SizedBox(height: 8),
-                    Text('Ride Distance: ${subscription.rideDistance} km', style: TextStyle(fontSize: 18)),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Add your activation logic here
-                        Navigator.pop(context); // Close the bottom sheet after activation
-                      },
-                      child: Text('Activate Plan'),
-                      style: ElevatedButton.styleFrom(
-                        foregroundColor: Colors.white, backgroundColor: Colors.blueAccent, // Text color on the button
-                        minimumSize: Size(double.infinity, 36), // Ensure the button spans the width
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8), // Rounded corners for the button
-                        ),
-                        padding: EdgeInsets.symmetric(horizontal: 12), // Horizontal padding
-                      ),
-                    ),
 
-                  ],
-                ),
+  void _showCheckoutScreen(Subscription subscription) {
+    final List<PriceItem> priceItems = [
+      PriceItem(
+          name: subscription.title,
+          quantity: 1,
+          itemCostCents: (subscription.price * 100).toInt()),
+    ];
+
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (context) => Theme(
+        data: lightTheme,  // Force light theme
+        child: Scaffold(
+          backgroundColor: Colors.white,  // Set background color to white
+          appBar: AppBar(
+            title: Text('Subscription Service'),
+          ),
+          body: CheckoutPage(
+            data: CheckoutData(
+              priceItems: priceItems,
+              taxRate: 0.07,
+              payToName: '',
+              displayNativePay: false,
+              isApple: Platform.isIOS,
+              onCardPay: (paymentInfo, checkoutResults) {
+                print('Card Payment Clicked');
+                _activatePlan(subscription);
+              },
+              onBack: () => Navigator.of(context).pop(),
+              displayEmail: true,
+              lockEmail: false,
+              initEmail: 'user@example.com',
+              initPhone: '1234567890',
+              initBuyerName: 'John Doe',
+              cashPrice: 19.99,
+              formKey: _formKey,
+              payBtnKey: _payBtnKey,
               ),
+            footer: _buildFooter(context),
+          ),
+        ),
+      ),
+    ));
+  }
+
+  Widget _buildFooter(BuildContext context) {
+    final theme = Theme.of(context);
+    final cancelColor = theme.colorScheme.error;
+    final confirmColor = theme.colorScheme.secondary;
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: Text('Cancel', style: theme.textTheme.bodyMedium),
+            style: ElevatedButton.styleFrom(
+              foregroundColor: Colors.white,
+              backgroundColor: cancelColor,
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              print('Confirm clicked');
+            },
+            child: Text('Confirm', style: theme.textTheme.bodyMedium),
+            style: ElevatedButton.styleFrom(
+              foregroundColor: Colors.white,
+              backgroundColor: confirmColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  // Method to show success dialog
+  void _showSuccessDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Success'),
+          content: Text(message),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
             ),
           ],
         );
       },
     );
   }
-
-
-  Widget _buildDetailRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          Icon(icon, size: 24, color: Colors.blueGrey),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              '$label: $value',
-              style: TextStyle(fontSize: 18),
+// Method to show error dialog
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Error'),
+          content: Text(message),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 }

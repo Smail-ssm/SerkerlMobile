@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 
 class CodeInputBottomSheet extends StatefulWidget {
+  const CodeInputBottomSheet({Key? key}) : super(key: key);
+
   @override
   _CodeInputBottomSheetState createState() => _CodeInputBottomSheetState();
 }
@@ -9,17 +11,23 @@ class CodeInputBottomSheet extends StatefulWidget {
 class _CodeInputBottomSheetState extends State<CodeInputBottomSheet> {
   TextEditingController _textEditingController = TextEditingController();
   late QRViewController _qrViewController;
-  GlobalKey _qrKey = GlobalKey(debugLabel: 'QR');
+  final GlobalKey _qrKey = GlobalKey(debugLabel: 'QR');
   String _scannedCode = '';
+  bool _isFlashOn = false; // Flash state variable
 
   @override
   void dispose() {
     _textEditingController.dispose();
+    _qrViewController.dispose(); // Dispose of the QRViewController to prevent memory leaks
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Get the theme data to determine the current mode
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+
     return SizedBox(
       height: MediaQuery.of(context).size.height * 0.7, // Adjust height as needed
       child: LayoutBuilder(
@@ -38,12 +46,12 @@ class _CodeInputBottomSheetState extends State<CodeInputBottomSheet> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Scan QR Code',
                               style: TextStyle(
                                 fontSize: 18.0,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.black,
+                                color: theme.textTheme.bodyLarge!.color,
                               ),
                             ),
                             const SizedBox(height: 8.0),
@@ -63,21 +71,24 @@ class _CodeInputBottomSheetState extends State<CodeInputBottomSheet> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Enter Code Manually',
                               style: TextStyle(
                                 fontSize: 18.0,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.black,
+                                color: theme.textTheme.bodyLarge!.color,
                               ),
                             ),
                             const SizedBox(height: 8.0),
                             TextField(
                               controller: _textEditingController,
-                              decoration: const InputDecoration(
+                              decoration: InputDecoration(
                                 border: OutlineInputBorder(),
-                                contentPadding: EdgeInsets.symmetric(horizontal: 12.0),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12.0),
+                                filled: true,
+                                fillColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
                               ),
+                              style: TextStyle(color: theme.textTheme.bodyLarge!.color),
                             ),
                           ],
                         ),
@@ -88,12 +99,12 @@ class _CodeInputBottomSheetState extends State<CodeInputBottomSheet> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Scan QR Code',
                         style: TextStyle(
                           fontSize: 18.0,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                          color: theme.textTheme.bodyLarge!.color,
                         ),
                       ),
                       const SizedBox(height: 8.0),
@@ -106,24 +117,41 @@ class _CodeInputBottomSheetState extends State<CodeInputBottomSheet> {
                         ),
                       ),
                       const SizedBox(height: 16.0),
-                      const Text(
+                      Text(
                         'Enter Code Manually',
                         style: TextStyle(
                           fontSize: 18.0,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                          color: theme.textTheme.bodyLarge!.color,
                         ),
                       ),
                       const SizedBox(height: 8.0),
                       TextField(
                         controller: _textEditingController,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12.0),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12.0),
+                          filled: true,
+                          fillColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
                         ),
+                        style: TextStyle(color: theme.textTheme.bodyLarge!.color),
                       ),
                     ],
                   ),
+                const SizedBox(height: 16.0),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: RawMaterialButton(
+                    onPressed: _toggleFlash,
+                    fillColor: isDarkMode ? Colors.blueGrey : Colors.blue,
+                    shape: const CircleBorder(),
+                    padding: const EdgeInsets.all(12.0),
+                    child: Icon(
+                      _isFlashOn ? Icons.flash_on : Icons.flash_off,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
               ],
             ),
           );
@@ -141,6 +169,14 @@ class _CodeInputBottomSheetState extends State<CodeInputBottomSheet> {
         _textEditingController.text = scanData.code!;
         _scannedCode = scanData.code!;
       });
+    });
+  }
+
+  void _toggleFlash() async {
+    await _qrViewController.toggleFlash();
+    bool? flashStatus = await _qrViewController.getFlashStatus();
+    setState(() {
+      _isFlashOn = flashStatus ?? false;
     });
   }
 }

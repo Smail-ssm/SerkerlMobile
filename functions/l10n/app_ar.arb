@@ -166,7 +166,7 @@
   "userIdNotFoundInSharedpreferences": "معرف المستخدم غير موجود في SharedPreferences",
   "notificationitemdart": "NotificationItem.dart",
   "notificationcarddart": "NotificationCard.dart",
-  "notificationsapidart": "NotificationsAPI.dart",
+  "NotificationServicedart": "NotificationService.dart",
   "noNotificationsYet": "لا توجد إشعارات بعد",
   "delete": "حذف",
   "getFreeRides": "احصل على رحلات مجانية",

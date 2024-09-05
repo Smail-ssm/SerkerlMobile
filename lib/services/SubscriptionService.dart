@@ -4,7 +4,8 @@ import '../util/util.dart';
 
 class SubscriptionService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final String collectionName = 'Subscription'; // Adjust based on your environment setup
+  final String collectionName =
+      'Subscription'; // Adjust based on your environment setup
 
   // Add a subscription
   Future<void> addSubscription(Subscription subscription) async {
@@ -44,6 +45,7 @@ class SubscriptionService {
       rethrow;
     }
   }
+
   // Update a subscription
   Future<void> updateSubscription(Subscription subscription) async {
     try {
@@ -67,6 +69,7 @@ class SubscriptionService {
     }
   }
 
-  activateSubscription(String id) {      print('activateSubscription');
+  activateSubscription(String id) {
+    print('activateSubscription');
   }
 }

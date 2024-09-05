@@ -37,17 +37,7 @@ final lightTheme = ThemeData(
     buttonColor: colors['Olivine']!,
     textTheme: ButtonTextTheme.primary,
   ),
-  inputDecorationTheme: InputDecorationTheme(
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10.0),
-      borderSide: BorderSide(color: colors['Light Grey']!),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10.0),
-      borderSide: BorderSide(color: colors['Olivine']!),
-    ),
-    labelStyle: TextStyle(color: colors['Charcoal']!),
-  ),
+
 );
 
 // Dark Theme
