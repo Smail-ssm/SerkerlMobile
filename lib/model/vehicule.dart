@@ -1,3 +1,4 @@
+import 'Battery.dart';
 import 'DeviceInfo.dart';
 import 'MaintenanceLog.dart';
 import 'rental.dart';
@@ -5,7 +6,7 @@ import 'rental.dart';
 class Vehicle {
   String id; // Unique identifier for the vehicle
   String model; // Model of the vehicle
-  String batteryID; // Battery ID or percentage
+  Battery battery; // Battery ID or percentage
   bool isAvailable; // Availability status of the vehicle
   double? latitude; // Latitude of the vehicle's location (optional)
   double? longitude; // Longitude of the vehicle's location (optional)
@@ -22,7 +23,7 @@ class Vehicle {
   Vehicle({
     required this.id,
     required this.model,
-    required this.batteryID,
+    required this.battery,
     required this.isAvailable,
     this.latitude,
     this.longitude,
@@ -42,7 +43,7 @@ class Vehicle {
     return Vehicle(
       id: json['id'],
       model: json['model'],
-      batteryID: json['batteryID'],
+      battery: Battery.fromJson(json['battery']),
       isAvailable: json['isAvailable'],
       latitude: json['latitude'],
       longitude: json['longitude'],
@@ -73,7 +74,7 @@ class Vehicle {
     return {
       'id': id,
       'model': model,
-      'batteryID': batteryID,
+      'batteryID': battery,
       'isAvailable': isAvailable,
       'latitude': latitude,
       'longitude': longitude,

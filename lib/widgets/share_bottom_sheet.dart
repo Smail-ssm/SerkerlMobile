@@ -6,7 +6,7 @@ import '../util/theme.dart';
 class ShareBottomSheet extends StatefulWidget {
   final String promoCode;
 
-  const ShareBottomSheet({required this.promoCode});
+  const ShareBottomSheet({Key? key, required this.promoCode}) : super(key: key);
 
   @override
   _ShareBottomSheetState createState() => _ShareBottomSheetState();

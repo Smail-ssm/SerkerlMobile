@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class ExpandableMapStyleButton extends StatefulWidget {
+  const ExpandableMapStyleButton({Key? key}) : super(key: key);
+
   @override
   _ExpandableMapStyleButtonState createState() => _ExpandableMapStyleButtonState();
 }

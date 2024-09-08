@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class VehicleTypesSheet extends StatefulWidget {
@@ -9,7 +8,7 @@ class VehicleTypesSheet extends StatefulWidget {
 }
 
 class _VehicleTypesSheetState extends State<VehicleTypesSheet> {
-  List<String> _selectedVehicles = [];
+  final List<String> _selectedVehicles = [];
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +71,7 @@ class _VehicleTypesSheetState extends State<VehicleTypesSheet> {
               child: Container(
                 width: 16,
                 height: 16,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   shape: BoxShape.circle,
                   color: Colors.green,
                 ),

@@ -26,7 +26,7 @@ class menuButton extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8.0), // Rounded corners
             ),
-            constraints: BoxConstraints.tightFor(
+            constraints: const BoxConstraints.tightFor(
               width: 48.0, // Square button width
               height: 48.0, // Square button height
             ),

@@ -16,7 +16,7 @@ class SubscriptionService {
           .set(subscription.toJson());
     } catch (e) {
       print('Error adding subscription: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -24,7 +24,7 @@ class SubscriptionService {
 
   Future<List<Subscription>> getAllSubscriptions() async {
     try {
-      String documentPath = await getFirestoreDocument();
+      String documentPath = getFirestoreDocument();
       final areasCollection = _firestore.collection(documentPath);
 
       QuerySnapshot querySnapshot = await areasCollection
@@ -55,7 +55,7 @@ class SubscriptionService {
           .update(subscription.toJson());
     } catch (e) {
       print('Error updating subscription: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -65,7 +65,7 @@ class SubscriptionService {
       await _firestore.collection(collectionName).doc(id).delete();
     } catch (e) {
       print('Error deleting subscription: $e');
-      throw e;
+      rethrow;
     }
   }
 

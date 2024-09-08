@@ -78,7 +78,7 @@ class _PricingWidgetState extends State<PricingWidget> {
                 _buildSubscriptionButton(),
                 if (_showSubscriptionDetails)
                   _isLoading
-                      ? Center(child: CircularProgressIndicator())
+                      ? const Center(child: CircularProgressIndicator())
                       : _buildSubscriptionDetails(),
               ],
             ),
@@ -93,7 +93,7 @@ class _PricingWidgetState extends State<PricingWidget> {
       padding: const EdgeInsets.symmetric(vertical: 16.0),
       child: Text(
         title,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.bold,
         ),
@@ -120,7 +120,7 @@ class _PricingWidgetState extends State<PricingWidget> {
                 Expanded(
                   child: Text(
                     vehicleType,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -130,7 +130,7 @@ class _PricingWidgetState extends State<PricingWidget> {
                 const SizedBox(width: 8),
                 Text(
                   price,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 16,
                     color: Colors.green,
                     fontWeight: FontWeight.bold,
@@ -153,14 +153,14 @@ class _PricingWidgetState extends State<PricingWidget> {
               alignment: Alignment.centerRight,
               child: ElevatedButton(
                 onPressed: onTap,
-                child: Text('Activate'),
+                child: const Text('Activate'),
                 style: ElevatedButton.styleFrom(
                   foregroundColor: Colors.white, backgroundColor: Colors.blueAccent, // Text color on the button
-                  minimumSize: Size(120, 36), // Set a fixed size for the button
+                  minimumSize: const Size(120, 36), // Set a fixed size for the button
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8), // Rounded corners for the button
                   ),
-                  padding: EdgeInsets.symmetric(horizontal: 12), // Add horizontal padding
+                  padding: const EdgeInsets.symmetric(horizontal: 12), // Add horizontal padding
                 ),
               ),
             ),
@@ -186,7 +186,7 @@ class _PricingWidgetState extends State<PricingWidget> {
 
   Widget _buildSubscriptionDetails() {
     if (_subscriptions.isEmpty) {
-      return Center(child: Text('No subscriptions available.'));
+      return const Center(child: Text('No subscriptions available.'));
     }
 
     return Column(
@@ -215,7 +215,7 @@ class _PricingWidgetState extends State<PricingWidget> {
         child: Scaffold(
           backgroundColor: Colors.white,  // Set background color to white
           appBar: AppBar(
-            title: Text('Subscription Service'),
+            title: const Text('Subscription Service'),
           ),
           body: CheckoutPage(
             data: CheckoutData(

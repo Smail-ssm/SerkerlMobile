@@ -1,0 +1,163 @@
+{
+  "@@locale": "ar",
+   "firebaseInitializationError": "خطأ في تهيئة Firebase",
+  "loadedEnvironmentVariables": "تم تحميل متغيرات البيئة",
+  "errorLoadingEnvironmentVariables": "خطأ في تحميل متغيرات البيئة",
+  "serkel": "سيركل 🔃",
+  "seenonboarding": "تم مشاهدة المقدمة",
+   "enableNotifications": "تفعيل الإشعارات",
+  "userid": "معرف المستخدم",
+  "errorFetchingClientData": "خطأ في جلب بيانات العميل",
+  "errorFetchingPosition": "خطأ في جلب الموقع",
+  "failedToInitializeApp": "فشل في تهيئة التطبيق",
+  "locationServicesDisabled": "خدمات الموقع معطلة",
+  "pleaseEnableLocationServicesToContinueUsingThisApp": "يرجى تمكين خدمات الموقع للاستمرار في استخدام هذا التطبيق.",
+  "locationServicesAreDisabled": "خدمات الموقع معطلة.",
+  "userDeclinedToEnableLocationServices": "رفض المستخدم تمكين خدمات الموقع.",
+  "locationPermissionDenied": "تم رفض إذن الموقع",
+  "pleaseAllowLocationPermissionsInSettingsToContinueUsingThisApp": "يرجى السماح بأذونات الموقع في الإعدادات للاستمرار في استخدام هذا التطبيق.",
+  "locationPermissionsAreDenied": "تم رفض أذونات الموقع.",
+  "userDeclinedToEnableLocationPermissions": "رفض المستخدم تمكين أذونات الموقع.",
+  "locationPermissionPermanentlyDenied": "تم رفض إذن الموقع بشكل دائم",
+  "pleaseEnableLocationPermissionsInAppSettingsToContinueUsingThisApp": "يرجى تمكين أذونات الموقع في إعدادات التطبيق للاستمرار في استخدام هذا التطبيق.",
+  "locationPermissionsArePermanentlyDenied": "تم رفض أذونات الموقع بشكل دائم.",
+  "cancel": "إلغاء",
+  "openSettings": "فتح الإعدادات",
+  "imageNotFound": "الصورة غير موجودة",
+  "yourNewWayToSerkel": "طريقتك الجديدة لاستخدام سيركل 🔃...",
+  "retry": "أعد المحاولة",
+  "lastPermissionRequired": "يتطلب الإذن لاستخدام التطبيق. يرجى منح الإذن في الإعدادات.",
+  "fcmToken": "رمز FCM",
+  "editProfile": "تعديل الملف الشخصي",
+  "personalInformation": "المعلومات الشخصية",
+  "username": "اسم المستخدم",
+  "fullName": "الاسم الكامل",
+  "phoneNumber": "رقم الهاتف",
+  "address": "العنوان",
+  "users": "المستخدمون",
+  "user": "مستخدم",
+  "preprod": "البيئة التجريبية",
+  "prod": "البيئة الإنتاجية",
+  "clientProfile": "ملف العميل",
+  "noClientDataAvailable": "لا توجد بيانات للعميل",
+  "email": "البريد الإلكتروني",
+  "role": "الدور",
+  "creationDate": "تاريخ الإنشاء",
+   "noImage": "لا توجد صورة",
+  "feedback": "التعليقات",
+  "weAreAlwaysLookingToImproveTheAppExperienceForOurRidersPleaseEnterYourFeedbackHere": "نحن نسعى دائمًا لتحسين تجربة التطبيق لمستخدمينا. يرجى إدخال ملاحظاتك هنا.",
+  "enterYourFeedback": "أدخل ملاحظاتك",
+  "addPictureOptional": "أضف صورة (اختياري)",
+  "enterYourEmail": "أدخل بريدك الإلكتروني",
+  "submit": "إرسال",
+  "feedbackSubmitted": "تم إرسال الملاحظات",
+  "tunisCityCenter": "مركز مدينة تونس",
+  "laMarsaBeach": "شاطئ المرسى",
+  "carthageRuins": "أطلال قرطاج",
+  "bardoMuseum": "متحف باردو",
+  "rideHistory": "تاريخ الرحلات",
+  "from": "من",
+  "to": "إلى",
+  "duration": "المدة",
+  "cost": "التكلفة",
+  "refreshClicked": "تم النقر على التحديث",
+  "logout": "تسجيل الخروج",
+  "areYouSureYouWantToLogout": "هل أنت متأكد من أنك تريد تسجيل الخروج؟",
+  "errorFetchingLocation": "خطأ في جلب الموقع",
+  "available": "متاح",
+  "notAvailable": "غير متاح",
+  "selectMapType": "اختر نوع الخريطة",
+  "normal": "عادي",
+  "satellite": "قمر صناعي",
+  "terrain": "تضاريس",
+  "hybrid": "هجين",
+  "tapToViewDetails": "اضغط لعرض التفاصيل",
+  "failedToLoadAddress": "فشل في تحميل العنوان",
+  "destinationDetails": "تفاصيل الوجهة",
+  "close": "إغلاق",
+  "vehicleDetails": "تفاصيل المركبة",
+  "model": "النموذج",
+  "batteryId": "معرف البطارية",
+  "refresh": "تحديث",
+  "vehicleTypes": "أنواع المركبات",
+  "ebike": "دراجة كهربائية",
+  "scooter": "سكوتر",
+  "filter": "تصفية",
+  "currentLocation": "الموقع الحالي",
+  "nogoZone": "منطقة محظورة",
+  "lowSpeedZone": "منطقة سرعة منخفضة",
+  "noParkZone": "منطقة ممنوع الوقوف",
+  "scooterParking": "موقف السكوتر",
+  "bikeParking": "موقف الدراجة",
+  "balance": "الرصيد",
+  "subscriptions": "الاشتراكات",
+  "notifications": "الإشعارات",
+  "support": "الدعم",
+  "language": "اللغة",
+  "profile": "الملف الشخصي",
+  "share": "مشاركة",
+  "scanQrCode": "مسح رمز الاستجابة السريعة",
+  "guest": "ضيف",
+  "noEmail": "لا يوجد بريد إلكتروني",
+  "options": "خيارات",
+  "tutorial": "الدليل",
+  "findAScooter": "البحث عن سكوتر",
+  "startRide": "بدء الرحلة",
+  "unlockScooter": "فتح السكوتر",
+  "scanTheQrCodeToStartYourRide": "امسح رمز الاستجابة السريعة لبدء رحلتك.",
+  "endRide": "إنهاء الرحلة",
+  "parking": "الوقوف",
+  "takePhoto": "التقط صورة",
+  "takeAPhotoOfTheParkedScooter": "التقط صورة للسكوتر المتوقف.",
+  "endRideConfirmation": "تأكيد إنهاء الرحلة",
+  "confirmRideCompletionInTheApp": "أكد إنهاء الرحلة في التطبيق.",
+  "zonesOnTheMap": "المناطق على الخريطة",
+  "greenZone": "المنطقة الخضراء",
+  "ridingAllowed": "القيادة مسموحة.",
+  "redZone": "المنطقة الحمراء",
+  "noRidingAllowed": "القيادة غير مسموحة.",
+  "yellowZone": "المنطقة الصفراء",
+  "reducedSpeedZone": "منطقة سرعة منخفضة.",
+  "greyZone": "المنطقة الرمادية",
+  "scooterUnavailableInThisArea": "السكوتر غير متاح في هذه المنطقة.",
+  "faqs": "الأسئلة الشائعة",
+  "commonQuestions": "الأسئلة الشائعة",
+  "findAnswersToFrequentlyAskedQuestions": "ابحث عن إجابات للأسئلة الشائعة.",
+  "troubleshooting": "استكشاف الأخطاء وإصلاحها",
+  "paymentIssues": "مشاكل الدفع",
+  "stepsToResolvePaymentProblems": "خطوات لحل مشاكل الدفع.",
+  "contactUs": "اتصل بنا",
+  "supportebikecom": "support@Ebike.com",
+  "helpCenter": "مركز المساعدة",
+  "detailedGuidesAndTutorials": "أدلة تفصيلية ودروس تعليمية.",
+  "communityForum": "منتدى المجتمع",
+  "joinTheCommunity": "انضم إلى المجتمع",
+  "connectWithOtherUsersAndGetHelp": "تواصل مع مستخدمين آخرين واحصل على المساعدة.",
+  "changeMapStyle": "تغيير نمط الخريطة",
+  "noNotificationsYet": "لا توجد إشعارات حتى الآن",
+  "delete": "حذف",
+  "success": "نجاح",
+  "ok": "حسنًا",
+  "error": "خطأ",
+  "resetPassword": "إعادة تعيين كلمة المرور",
+  "emailOrMobileNumber": "البريد الإلكتروني أو رقم الهاتف",
+  "languageCode": "رمز اللغة",
+  "settings": "الإعدادات",
+  "english": "الإنجليزية",
+  "french": "الفرنسية",
+  "arabic": "العربية",
+  "signIn": "تسجيل الدخول",
+  "forgotPasswordResetIt": "نسيت كلمة المرور؟ أعد تعيينها",
+  "signInFailed": "فشل في تسجيل الدخول",
+  "signUp": "تسجيل",
+  "dateOfBirthYyyymmdd": "تاريخ الميلاد (YYYY-MM-DD)",
+  "selectProfilePicture": "اختر صورة الملف الشخصي",
+  "passwordMustBeAtLeast6CharactersLong": "يجب أن يكون طول كلمة المرور 6 أحرف على الأقل.",
+  "validationError": "خطأ في التحقق",
+  "pleaseEnterAValidEmailAddress": "يرجى إدخال عنوان بريد إلكتروني صالح",
+  "phone": "هاتف",
+  "confirm": "تأكيد",
+  "errorSigningInWithGoogle": "خطأ في تسجيل الدخول باستخدام Google",
+  "userIdNotFoundInSharedPreferences": "معرّف المستخدم غير موجود في SharedPreferences",
+  "failedToSignInWithGooglePleaseTryAgainLater": "فشل تسجيل الدخول باستخدام Google. يرجى المحاولة لاحقًا."
+}

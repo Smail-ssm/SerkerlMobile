@@ -7,7 +7,7 @@ class Vehicleservice {
 
   Future<List<Vehicle>> fetchVehicles() async {
     try {
-      String documentPath = await getFirestoreDocument();
+      String documentPath = getFirestoreDocument();
       final VehiclesCollection = _firestore.collection(documentPath);
 
       QuerySnapshot querySnapshot = await VehiclesCollection

@@ -7,7 +7,7 @@ class AreaService {
 
   Future<List<Area>> fetchAreas() async {
     try {
-      String documentPath = await getFirestoreDocument();
+      String documentPath = getFirestoreDocument();
       final areasCollection = _firestore.collection(documentPath);
 
       QuerySnapshot querySnapshot = await areasCollection

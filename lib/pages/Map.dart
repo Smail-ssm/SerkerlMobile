@@ -1,24 +1,30 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 
+import 'package:easy_localization/easy_localization.dart';
 import 'package:ebike/pages/FeedbackPage.dart';
-import 'package:ebike/pages/Pricing.dart';
-import 'package:ebike/pages/signin_page.dart';
-import 'package:ebike/services/VhService.dart';
 import 'package:ebike/pages/NotificationsList.dart';
+import 'package:ebike/pages/Pricing.dart';
+import 'package:ebike/pages/Settings.dart';
+import 'package:ebike/pages/signin_page.dart';
+import 'package:ebike/services/Vehicleservice.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:geocoding/geocoding.dart';
+import 'package:flutter_html/flutter_html.dart' as html;
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../model/LocationInfo.dart';
 import '../model/area.dart';
 import '../model/client.dart';
+import '../model/parking.dart';
 import '../model/vehicule.dart';
 import '../services/AreaService.dart';
+import '../services/map_service.dart';
+import '../services/parkingService.dart';
 import '../util/Config.dart';
 import '../util/util.dart';
 import '../widgets/CodeInputBottomSheet.dart';
@@ -29,7 +35,6 @@ import '../widgets/menuButton.dart';
 import '../widgets/share_bottom_sheet.dart';
 import 'ClientProfilePage.dart';
 import 'History.dart';
-import 'package:http/http.dart' as http;
 
 class MapPage extends StatefulWidget {
   final Client? client;
@@ -48,24 +53,32 @@ class _MapPageState extends State<MapPage> {
   final _filterController = StreamController<List<String>>.broadcast();
   List<String> _selectedVehicleTypes = []; // Define the variable here
   final Set<Marker> _markers = {};
-  List<MarkerId> _destinationMarkerIds = [];
+  Set<Polyline> _polylines = {};
+  final List<MarkerId> _destinationMarkerIds = [];
+  final MapService _mapService = MapService(ParkingService(), Vehicleservice()); // Initialize the service
 
   Client? client; // User data
   GoogleMapController? _mapController;
   final scaffoldKey = GlobalKey<ScaffoldState>();
-    late LatLng currentLocation; // Store current location
+  late LatLng currentLocation; // Store current location
   bool isLoading = true; // Track loading state
   Set<Polygon> polygons = {}; // Set to store polygons
   final AreaService _areaService = AreaService();
   final Vehicleservice _vehicleService = Vehicleservice();
-  bool isLoadingLocation = true; // Track loading state
+  final ParkingService _parkingService = ParkingService();
+  bool isLoadingLocation = true;
+
+  late LatLng _destination; // Track loading state
 
   @override
   void initState() {
     super.initState();
+
     _initializeLocation();
     _fetchAreas(); // Fetch areas when the widget initializes
     _fetchVehiculs(); // Fetch areas when the widget initializes
+  //  _fetchAndRenderParkings(); // Fetch and render parking on map initialization
+
     client = widget.client;
     requestPermissions(context); // Request location permissions
     _filterController.stream.listen((selectedVehicleTypes) {
@@ -78,7 +91,41 @@ class _MapPageState extends State<MapPage> {
     _filterController.close();
     super.dispose();
   }
+  Future<void> _fetchMarkers() async {
+    setState(() {
+      isLoading = true;
+    });
 
+    try {
+      // Call the service with _selectedVehicleTypes passed as the filter
+      final result = await _mapService.fetchAndCreateMarkers(
+        _markers,
+        _markerInfoMap,
+        _selectedVehicleTypes, // Pass the selected vehicle types
+      );
+
+      setState(() {
+        _markers.clear();
+        _markers.addAll(result['markers']);
+        _markerInfoMap.clear();
+        _markerInfoMap.addAll(result['markerInfoMap']);
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      Fluttertoast.showToast(
+          msg:  'Error fetching markers: $e',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.black,
+          textColor: Colors.white,
+          fontSize: 16.0
+      );
+    }
+  }
   Future<void> _initializeLocation() async {
     // SharedPreferences prefs = await SharedPreferences.getInstance();
     // double? storedLatitude = prefs.getDouble('latitude');
@@ -89,20 +136,103 @@ class _MapPageState extends State<MapPage> {
       isLoadingLocation = true; // Start showing loading spinner
     });
     try {
-        Position position = await Geolocator.getCurrentPosition();
-        setState(() {
-          currentLocation = LatLng(position.latitude, position.longitude);
-          isLoadingLocation = false; // Location fetched successfully
-        });
-        _moveCameraToCurrentLocation();
-      } catch (e) {
-        print('Error fetching location: $e');
-        setState(() {
-           isLoadingLocation = false; // Stop loading even if location fetch failed
-        });
-      }
+      Position position = await Geolocator.getCurrentPosition();
+      setState(() {
+        currentLocation = LatLng(position.latitude, position.longitude);
+        isLoadingLocation = false; // Location fetched successfully
+      });
+      _moveCameraToCurrentLocation();
+    } catch (e) {
+          Fluttertoast.showToast(
+            msg:  'Error fetching location: $e',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Colors.black,
+            textColor: Colors.white,
+            fontSize: 16.0
+        );
+      setState(() {
+        isLoadingLocation = false; // Stop loading even if location fetch failed
+      });
     }
+  }
 
+  // }
+  // Fetch the parking list and render them as markers
+  // Future<void> _fetchAndRenderParkings() async {
+  //   setState(() {
+  //     isLoading = true; // Show loading indicator
+  //   });
+  //
+  //   // Create custom icon for parking
+  //   final parkingIcon = await createCustomIcon(
+  //       Icons.local_parking, Colors.red); // Customize parking icon
+  //
+  //   try {
+  //     // Fetch the list of parkings from the service
+  //     List<Parking> parkings = await ParkingService().fetchParkings();
+  //     if (kDebugMode) {
+  //       print(
+  //         'Fetched parkings: ${parkings.length}');
+  //     } // Debugging to see if data is being fetched
+  //
+  //     // Prepare new markers and marker info map
+  //     final newMarkers = <Marker>{};
+  //     final newMarkerInfo = <MarkerId, MarkerInfo>{};
+  //
+  //     for (var parking in parkings) {
+  //       print(
+  //           'Parking: ${parking.name}, Coordinates: ${parking.coordinates.latitude}, ${parking.coordinates.longitude}'); // Check coordinates
+  //       if (parking.coordinates.latitude == 0.0 ||
+  //           parking.coordinates.longitude == 0.0) {
+  //         continue; // Skip invalid data
+  //       }
+  //
+  //       // Create marker for the parking
+  //       final markerId = MarkerId(parking.id);
+  //       final marker = Marker(
+  //         markerId: markerId,
+  //         icon: parkingIcon,
+  //         position: LatLng(
+  //             parking.coordinates.latitude, parking.coordinates.longitude),
+  //         onTap: () => _onMarkerTapped(newMarkerInfo[markerId]!),
+  //         infoWindow: InfoWindow(
+  //           title: parking.name,
+  //           snippet:
+  //               'Capacity: ${parking.currentCapacity}/${parking.maxCapacity}',
+  //         ),
+  //       );
+  //
+  //       // Add the marker to the set and marker info map
+  //       newMarkers.add(marker);
+  //       newMarkerInfo[markerId] = MarkerInfo(
+  //         id: parking.id,
+  //         model: parking.name,
+  //         isAvailable: parking.isOpen,
+  //         isParking: true,
+  //         // Indicate that this is a parking marker
+  //         parking: parking,
+  //         vehicle: null,
+  //         // No vehicle associated with parking
+  //         isDestination: false,
+  //       );
+  //     }
+  //
+  //     // Update the map markers and marker info map
+  //     setState(() {
+  //       _markers.addAll(newMarkers); // Add new parking markers
+  //       _markerInfoMap.addAll(newMarkerInfo); // Add new parking marker info
+  //       isLoading = false; // Hide loading indicator
+  //     });
+  //   } catch (e) {
+  //     if (kDebugMode) {
+  //       print('Error fetching parkings: $e');
+  //     }
+  //     setState(() {
+  //       isLoading = false; // Hide loading indicator on error
+  //     });
+  //   }
   // }
 
   void _moveCameraToCurrentLocation() {
@@ -119,10 +249,93 @@ class _MapPageState extends State<MapPage> {
       List<Area> areas = await _areaService.fetchAreas();
       setState(() {
         polygons = areas.map((area) => area.polygon).toSet();
-        print('  fetching areas: $areas');
-      });
+       });
     } catch (e) {
-      print('Error fetching areas: $e');
+       Fluttertoast.showToast(
+          msg:  'Error fetching areas: $e',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.black,
+          textColor: Colors.white,
+          fontSize: 16.0
+      );  }
+  }
+  Future<void> _fetchAndRenderParkings() async {
+    setState(() {
+      isLoading = true; // Show loading indicator
+    });
+
+    try {
+      // Fetch parkings from the service
+     List<Parking> parkings = await _parkingService.fetchParkings();
+
+      // Load custom parking icon from the Material icon
+      final parkingIcon = await createCustomIcon(Icons.local_parking, Colors.green);
+
+      // Prepare new markers and marker info map
+      final newMarkers = <Marker>{};
+      final newMarkerInfo = <MarkerId, MarkerInfo>{};
+
+      for (var parking in parkings) {
+
+        // Check if parking has valid coordinates
+        if (parking.coordinates.latitude == 0.0 || parking.coordinates.longitude == 0.0) {
+          continue; // Skip invalid data
+        }
+
+        final markerId = MarkerId(parking.id);
+
+        // Use the getMarkerIcon function to get the parking icon (since vehicle is null)
+        final markerIcon = getMarkerIcon(
+          null, // No vehicle, so we pass null
+          BitmapDescriptor.defaultMarker, // Placeholder for scooters
+          BitmapDescriptor.defaultMarker, // Placeholder for ebikes
+          parkingIcon, // Pass the parking icon
+        );
+
+        // Create marker for the parking
+        final marker = Marker(
+          markerId: markerId,
+          icon: markerIcon,
+          position: LatLng(parking.coordinates.latitude, parking.coordinates.longitude),
+          onTap: () => _onMarkerTap( markerId ),
+          infoWindow: InfoWindow(
+            title: parking.name,
+            snippet: 'Capacity: ${parking.currentCapacity}/${parking.maxCapacity}',
+          ),
+        );
+
+        newMarkers.add(marker);
+        newMarkerInfo[markerId] = MarkerInfo(
+          id: parking.id,
+          model: parking.name,
+          isAvailable: parking.isOpen,
+          isParking: true,
+          parking: parking,
+          vehicle: null, // No vehicle, only parking
+          isDestination: false,
+        );
+      }
+
+      setState(() {
+         _markers.addAll(newMarkers); // Add new parking markers
+         _markerInfoMap.addAll(newMarkerInfo); // Add new parking marker info
+        isLoading = false; // Hide loading indicator
+      });
+
+    } catch (e) {
+       Fluttertoast.showToast(
+          msg:  'Error fetching parking: $e',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.black,
+          textColor: Colors.white,
+          fontSize: 16.0
+      );      setState(() {
+        isLoading = false; // Hide loading indicator on error
+      });
     }
   }
 
@@ -131,12 +344,15 @@ class _MapPageState extends State<MapPage> {
       isLoading = true; // Show loading indicator
     });
 
-    final scooterIcon =
-        await createCustomIcon(Icons.electric_scooter, Colors.blue);
+    final scooterIcon = await createCustomIcon(Icons.electric_scooter, Colors.blue);
     final ebikeIcon = await createCustomIcon(Icons.pedal_bike, Colors.green);
+    final parkingIcon = await createCustomIcon(Icons.local_parking, Colors.red);
 
     try {
+      List<Parking> parkings = await _parkingService.fetchParkings();
+
       List<Vehicle> vehicles = await _vehicleService.fetchVehicles();
+
       final filteredVehicles = vehicles.where((vehicle) {
         if (_selectedVehicleTypes.isEmpty) return true; // No filter selected
         return _selectedVehicleTypes.any(
@@ -145,20 +361,51 @@ class _MapPageState extends State<MapPage> {
 
       final newMarkers = <Marker>{};
       final newMarkerInfo = <MarkerId, MarkerInfo>{};
-
-      for (var vehicle in filteredVehicles) {
-        if (vehicle.latitude == null || vehicle.longitude == null)
+      for (var parking in parkings) {
+        if (parking.coordinates.latitude == 0.0 || parking.coordinates.longitude == 0.0) {
           continue; // Skip invalid data
+        }
+
+        final markerId = MarkerId(parking.id);
+        final markerIcon = getMarkerIcon(
+          null, // No vehicle, so we pass null
+          BitmapDescriptor.defaultMarker, // Placeholder for scooters
+          BitmapDescriptor.defaultMarker, // Placeholder for ebikes
+          parkingIcon, // Pass the parking icon
+        ); final marker = Marker(
+          markerId: markerId,
+          icon: markerIcon,
+          position: LatLng(parking.coordinates.latitude, parking.coordinates.longitude),
+          onTap: () => _onMarkerTap( markerId ),
+          infoWindow: InfoWindow(
+            title: parking.name,
+            snippet: 'Capacity: ${parking.currentCapacity}/${parking.maxCapacity}',
+          ),
+        );
+        newMarkers.add(marker);
+        newMarkerInfo[markerId] = MarkerInfo(
+          id: parking.id,
+          model: parking.name,
+          isAvailable: parking.isOpen,
+          isParking: true,
+          parking: parking,
+          vehicle: null, // No vehicle, only parking
+          isDestination: false,
+        );}
+      for (var vehicle in filteredVehicles) {
+        if (vehicle.latitude == null || vehicle.longitude == null) {
+          continue; // Skip invalid data
+        }
 
         final markerIcon =
-            getMarkerIconForVehicle(vehicle, scooterIcon, ebikeIcon);
+            getMarkerIcon(vehicle, scooterIcon, ebikeIcon,BitmapDescriptor.defaultMarker);
         final markerId = MarkerId(vehicle.id);
 
         final marker = Marker(
           markerId: markerId,
           icon: markerIcon,
           position: LatLng(vehicle.latitude!, vehicle.longitude!),
-          onTap: () => _onMarkerTapped(newMarkerInfo[markerId]!),
+          onTap: () => _onMarkerTap( markerId ),
           infoWindow: InfoWindow(
             title: vehicle.model,
             snippet: vehicle.isAvailable ? 'Available' : 'Not Available',
@@ -171,9 +418,9 @@ class _MapPageState extends State<MapPage> {
             model: vehicle.model,
             isAvailable: vehicle.isAvailable,
             vehicle: vehicle,
+            isParking: false,
             isDestination: false);
       }
-
       setState(() {
         _markers.clear(); // Clear existing markers
         _markers.addAll(newMarkers); // Add new filtered markers
@@ -182,7 +429,16 @@ class _MapPageState extends State<MapPage> {
         isLoading = false; // Hide loading indicator
       });
     } catch (e) {
-      print('Error fetching vehicles: $e');
+
+      Fluttertoast.showToast(
+          msg:  'Error fetching vehicles: $e',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.black,
+          textColor: Colors.white,
+          fontSize: 16.0
+      );
       setState(() {
         isLoading = false; // Hide loading indicator on error
       });
@@ -237,23 +493,21 @@ class _MapPageState extends State<MapPage> {
       key: scaffoldKey,
       drawer: _buildLeftDrawer(),
       endDrawer: _buildRightDrawer(),
-      body:   Stack(
-              children: [
-                currentLocation != null
-                    ? _buildGoogleMap()
-                    : Container(),
-                menuButton(scaffoldKey: scaffoldKey),
-                InfoButton(scaffoldKey: scaffoldKey),
-                _buildCurrentLocationButton(),
-                _buildMapGuidButton(),
-                _buildScanCodeButton(),
-                _buildMapStyleButton(),
-                if (isLoadingLocation)
-                  const Center(
-                    child: CircularProgressIndicator(),
-                  ),
-              ],
+      body: Stack(
+        children: [
+          currentLocation != null ? _buildGoogleMap() : Container(),
+          menuButton(scaffoldKey: scaffoldKey),
+          InfoButton(scaffoldKey: scaffoldKey),
+          _buildCurrentLocationButton(),
+          _buildMapGuidButton(),
+          _buildScanCodeButton(),
+          _buildMapStyleButton(),
+          if (isLoadingLocation)
+            const Center(
+              child: CircularProgressIndicator(),
             ),
+        ],
+      ),
     );
   }
 
@@ -261,7 +515,8 @@ class _MapPageState extends State<MapPage> {
     return GoogleMap(
       mapType: _currentMapType,
       initialCameraPosition: CameraPosition(
-        target: currentLocation ?? LatLng(0, 0), // Fallback to (0,0) if location is not available
+        target: currentLocation ?? const LatLng(0, 0),
+        // Fallback to (0,0) if location is not available
         zoom: 15.0,
       ),
       onMapCreated: (controller) {
@@ -269,12 +524,14 @@ class _MapPageState extends State<MapPage> {
       },
       polygons: polygons,
       markers: _markers,
+      polylines: _polylines,
+      // Display the route polyline
       myLocationEnabled: true,
       myLocationButtonEnabled: false,
       // No my location button
       zoomControlsEnabled: false,
-      // No zoom controls
       onLongPress: _onLongPress,
+      // Handle long press to set destination
       mapToolbarEnabled: false,
     );
   }
@@ -282,7 +539,7 @@ class _MapPageState extends State<MapPage> {
   void _onLongPress(LatLng position) async {
     final markerId = MarkerId(DateTime.now().millisecondsSinceEpoch.toString());
 
-    // Get location info
+    // Get location info for the long-pressed position
     final locationInfo =
         await getAddressFromLatLng(position.latitude, position.longitude);
 
@@ -291,158 +548,228 @@ class _MapPageState extends State<MapPage> {
       position: position,
       onTap: () => _onMarkerTap(markerId),
       infoWindow: InfoWindow(
-        title: locationInfo!.address, // Display the address in the info window
+        title: locationInfo?.address ?? 'Unknown Location',
+        // Use address as title
         snippet: 'Tap to view details',
       ),
     );
 
     setState(() {
-      // Add the new marker
-      _markers.add(marker);
-
-      // Add the marker info to the map
-      _markerInfoMap[markerId] = MarkerInfo(
-        id: 'Marker ${markerId.value}',
-        model: locationInfo!.address,
-        // Store the address as model info
-        isAvailable: false,
-        vehicle: null,
-        isDestination: true,
-      );
-
       // Remove the previous destination marker if it exists
       if (_destinationMarkerIds.isNotEmpty) {
         final previousMarkerId = _destinationMarkerIds.last;
-        _removeMarker(previousMarkerId);
-        _destinationMarkerIds.remove(previousMarkerId);
+        _removeMarker(
+            previousMarkerId.value); // Remove using the string ID of MarkerId
       }
+
+      // Add the new destination marker
+      _markers.add(marker);
+      _markerInfoMap[markerId] = MarkerInfo(
+        id: markerId.value,
+        // Use the markerId string value
+        model: locationInfo?.address ?? 'Unknown',
+        // Store the address as model info
+        isAvailable: false,
+        vehicle: null,
+        isParking: false,
+
+        isDestination: true,
+      );
 
       // Add the new marker ID to the destination markers list
       _destinationMarkerIds.add(markerId);
+
+      // Set the new destination
+      _destination = position;
     });
+
+    _drawRoute(currentLocation, position, markerId);
   }
 
-  void _removeMarker(MarkerId markerId) {
+  void _removeMarker(String markerId) {
     setState(() {
-      _markers.removeWhere((marker) => marker.markerId == markerId);
+      // Find the MarkerId in _destinationMarkerIds that matches the string markerId
+      MarkerId? markerToRemove = _destinationMarkerIds
+          .firstWhere((markerIdObj) => markerIdObj.value == markerId);
+
+      // Remove the marker from _markers
+      _markers.removeWhere((marker) => marker.markerId == markerToRemove);
+
+      // Remove from _destinationMarkerIds
+      _destinationMarkerIds.remove(markerToRemove);
+
+      // Optionally clear polylines if they are associated with the marker
+      _polylines.clear();
+
+      // Remove marker info from the map
       _markerInfoMap.remove(markerId);
     });
-  }
-
-  Future<LocationInfo?> getAddressFromLatLng(double lat, double lng) async {
-    String _host = 'https://maps.googleapis.com/maps/api/geocode/json';
-    final url =
-        '$_host?key=${Config.googleMapsApiKey}&language=en&latlng=$lat,$lng';
-
-    var response = await http.get(Uri.parse(url));
-    if (response.statusCode == 200) {
-      Map data = jsonDecode(response.body);
-      String _formattedAddress = data["results"][0]["formatted_address"];
-      print("response ==== $_formattedAddress");
-      return LocationInfo(address: _formattedAddress);
-    } else {
-      print('Failed to load address');
-      return null;
-    }
   }
 
   void _onMarkerTap(MarkerId markerId) {
     final markerInfo = _markerInfoMap[markerId];
     if (markerInfo == null) return;
-    _onMarkerTapped(markerInfo);
-  }
 
-  void _onMarkerTapped(MarkerInfo markerInfo) {
-    if (markerInfo.isDestination) {
+    if (markerInfo.isParking) {
+      // Handle parking marker tap
+      _showParkingDetails(markerInfo.parking!); // Show parking details
+    } else if (markerInfo.isDestination) {
       // Handle destination marker tap
       _showDestinationDetails(markerInfo);
     } else {
       // Handle vehicle marker tap
       showModalBottomSheet(
         context: context,
-        builder: (context) =>
-            vhBottomSheet(context: context, markerInfo: markerInfo),
+        builder: (context) => VehicleBottomSheet(
+          context: context,
+          markerInfo: markerInfo, // Pass vehicle marker information
+          currentLocation: currentLocation, // Pass current location
+          drawRoute: (LatLng origin, LatLng destination, MarkerId markerId) {
+            _drawRoute(origin, destination, markerId); // Implement route drawing
+          },
+        ),
       );
     }
   }
 
-  void _showDestinationDetails(MarkerInfo markerId) {
-    // Show destination details in a modal bottom sheet
+
+  void _showParkingDetails(Parking parking) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark; // Check if dark mode is active
+
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
-        return Container(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                'Destination Details',
-                style: Theme.of(context).textTheme.headline6,
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'Details for ${markerId?.model ?? 'unknown'}',
-                style: Theme.of(context).textTheme.bodyText1,
-              ),
-              const SizedBox(height: 20),
-              Align(
-                alignment: Alignment.bottomRight,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Close'),
+        return Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Container(
+            color: isDarkMode ? Colors.black : Colors.white, // Set background color based on theme
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text('Parking: ${parking.name}',
+                    style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 10),
+                Text('Address: ${parking.address}',
+                    style: Theme.of(context).textTheme.bodyLarge),
+                const SizedBox(height: 10),
+                Text('Status: ${parking.isOpen ? "Open" : "Closed"}',
+                    style: Theme.of(context).textTheme.bodyLarge),
+                Text(
+                    'Capacity: ${parking.currentCapacity}/${parking.maxCapacity}',
+                    style: Theme.of(context).textTheme.bodyLarge),
+                const SizedBox(height: 20),
+                Align(
+                  alignment: Alignment.bottomRight,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDarkMode ? Colors.grey[700] : Colors.blue, // Adjust button color
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('Close'),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-  void _showVehicleDetails(Vehicle vehicle) {
-    // Show vehicle details, e.g., in a dialog or bottom sheet
-    showDialog(
+
+  void _showDestinationDetails(MarkerInfo markerInfo) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Vehicle Details'),
-          content:
-              Text('Model: ${vehicle.model}\nBattery ID: ${vehicle.batteryID}'),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Close'),
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
+            color: isDarkMode ? Colors.black : Colors.white, // Adjust background color
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                // Remove Marker button
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop(); // Close bottom sheet
+                      _removeMarker(markerInfo.id); // Remove the marker from the map
+                    },
+                    icon: const Icon(Icons.delete),
+                    label: const Text('Remove Marker'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red, // Keep delete button red
+                    ),
+                  ),
+                ),
+                Text(
+                  'Destination Details',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Location: ${markerInfo.model}',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Distance: ${markerInfo.distance ?? 'N/A'}',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+                Text(
+                  'Duration: ${markerInfo.duration ?? 'N/A'}',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+                const SizedBox(height: 10),
+                ExpansionTile(
+                  title: Text(
+                    'Turn-by-turn Instructions',
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                  children: [
+                    for (var step in markerInfo.steps ?? [])
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: html.Html(
+                          data: step, // Render HTML data using flutter_html
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Align(
+                  alignment: Alignment.bottomRight,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDarkMode ? Colors.grey[700] : Colors.blue, // Adjust button color
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('Close'),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         );
       },
     );
   }
 
-  void requestPermissions(BuildContext context) async {
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location permissions are denied')),
-        );
-      } else if (permission == LocationPermission.deniedForever) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Location permissions are permanently denied')),
-        );
-      }
-    }
-  }
 
-  bool _showMapGuide = false;
+  final bool _showMapGuide = false;
 
   Widget _buildRefreshButton() {
     return Builder(
@@ -452,9 +779,11 @@ class _MapPageState extends State<MapPage> {
 
         return FloatingActionButton.extended(
           onPressed: () {
-            _fetchVehiculs();
-            print("Refresh clicked");
-          },
+            _initializeLocation();
+            _fetchAreas(); // Fetch areas when the widget initializes
+            _fetchVehiculs(); // Fetch areas when the widget initializes
+          //  _fetchAndRenderParkings(); // Fetch and render parking on map initialization
+           },
           backgroundColor: buttonColor,
           // Adaptable to light and dark mode
           icon: Icon(
@@ -614,7 +943,8 @@ class _MapPageState extends State<MapPage> {
             message: 'Current Location', // Tooltip message
             child: RawMaterialButton(
               onPressed: _initializeLocation,
-              fillColor: buttonColor, // Adaptable to light and dark mode
+              fillColor: buttonColor,
+              // Adaptable to light and dark mode
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8.0), // Rounded corners
               ),
@@ -623,8 +953,7 @@ class _MapPageState extends State<MapPage> {
                 height: 40.0, // Square button height
               ),
               child: Icon(
-                Icons.my_location,
-                size: 24.0, // Icon size
+                Icons.my_location, size: 24.0, // Icon size
                 color: iconColor, // Icon color adaptable to button background
               ),
             ),
@@ -633,7 +962,6 @@ class _MapPageState extends State<MapPage> {
       ),
     );
   }
-
 
   void _showMapGuideBottomSheet(BuildContext context) {
     showModalBottomSheet(
@@ -714,8 +1042,8 @@ class _MapPageState extends State<MapPage> {
   Widget _buildItem(
       IconData icon, String title, String description, Color color) {
     final theme = Theme.of(context);
-    final textColor = theme.textTheme.bodyText1?.color ?? Colors.black;
-    final subtitleColor = theme.textTheme.bodyText2?.color ?? Colors.grey;
+    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
+    final subtitleColor = theme.textTheme.bodyMedium?.color ?? Colors.grey;
 
     return ListTile(
       leading: Icon(icon, color: color),
@@ -742,12 +1070,14 @@ class _MapPageState extends State<MapPage> {
           final iconColor = Theme.of(context).colorScheme.onPrimary;
 
           return Tooltip(
-            message: _showMapGuide ? 'Close Map Guide' : 'Open Map Guide', // Tooltip message
+            message: _showMapGuide ? 'Close Map Guide' : 'Open Map Guide',
+            // Tooltip message
             child: RawMaterialButton(
               onPressed: () {
                 _showMapGuideBottomSheet(context);
               },
-              fillColor: buttonColor, // Background color of the button
+              fillColor: buttonColor,
+              // Background color of the button
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8.0), // Rounded corners
               ),
@@ -823,14 +1153,14 @@ class _MapPageState extends State<MapPage> {
             },
           ),
           buildListTile(
-            'Language',
+            'language'.tr(),
             Icons.language,
             () {
               showSnackBar(context, 'Language');
             },
           ),
           buildListTile(
-            'Profile',
+            'profile'.tr(),
             Icons.person,
             () {
               Navigator.push(
@@ -842,7 +1172,7 @@ class _MapPageState extends State<MapPage> {
             },
           ),
           buildListTile(
-            'Share',
+            'share'.tr(),
             Icons.share,
             () {
               showShareBottomSheet(
@@ -850,7 +1180,7 @@ class _MapPageState extends State<MapPage> {
             },
           ),
           buildListTile(
-            'FeedBack',
+            'feedback'.tr(),
             Icons.feedback,
             () {
               Navigator.push(
@@ -878,11 +1208,12 @@ class _MapPageState extends State<MapPage> {
             showModalBottomSheet(
               context: context,
               builder: (BuildContext context) {
-                return CodeInputBottomSheet(); // Your custom bottom sheet widget
+                return const CodeInputBottomSheet(); // Your custom bottom sheet widget
               },
             );
           },
-          fillColor: buttonColor, // Adapt button color based on theme
+          fillColor: buttonColor,
+          // Adapt button color based on theme
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8.0), // Rounded corners
           ),
@@ -891,8 +1222,7 @@ class _MapPageState extends State<MapPage> {
             height: 40.0, // Button height
           ),
           child: Icon(
-            Icons.qr_code,
-            size: 20.0, // Icon size
+            Icons.qr_code, size: 20.0, // Icon size
             color: iconColor, // Adapt icon color based on theme
           ),
         ),
@@ -968,7 +1298,15 @@ class _MapPageState extends State<MapPage> {
         ),
       ),
       otherAccountsPictures: [
-        CircleAvatar(child: Icon(Icons.settings, color: iconColor)),
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const SettingsPage()),
+            );
+          }, // Call the logout function when tapped
+          child: CircleAvatar(child: Icon(Icons.settings, color: iconColor)),
+        ),
         GestureDetector(
           onTap: onLogout, // Call the logout function when tapped
           child: CircleAvatar(child: Icon(Icons.logout, color: iconColor)),
@@ -982,7 +1320,7 @@ class _MapPageState extends State<MapPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text("Logout"),
+          title: Text('Logout'.tr()),
           content: const Text("Are you sure you want to logout?"),
           actions: [
             TextButton(
@@ -1069,8 +1407,8 @@ class _MapPageState extends State<MapPage> {
 
   List<Widget> buildRightDrawerTiles(BuildContext context) {
     final theme = Theme.of(context);
-    final textColor = theme.textTheme.bodyText1?.color ?? Colors.black;
-    final subtitleColor = theme.textTheme.bodyText2?.color ?? Colors.grey;
+    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
+    final subtitleColor = theme.textTheme.bodyMedium?.color ?? Colors.grey;
 
     return [
       Center(
@@ -1279,7 +1617,8 @@ class _MapPageState extends State<MapPage> {
           onPressed: () {
             _showMapTypeDialog();
           },
-          fillColor: buttonColor, // Adapt button color based on theme
+          fillColor: buttonColor,
+          // Adapt button color based on theme
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8.0), // Rounded corners
           ),
@@ -1288,26 +1627,103 @@ class _MapPageState extends State<MapPage> {
             height: 40.0, // Button height
           ),
           child: Icon(
-            Icons.style_outlined,
-            size: 20.0, // Icon size
+            Icons.style_outlined, size: 20.0, // Icon size
             color: iconColor, // Adapt icon color based on theme
           ),
         ),
       ),
     );
   }
-}
 
-Widget buildListTile(
-  String title,
-  IconData icon,
-  VoidCallback onTap, {
-  String? value,
-}) {
-  return ListTile(
-    leading: Icon(icon),
-    title: Text(title),
-    subtitle: value != null ? Text(value) : null,
-    onTap: onTap,
-  );
+  Future<void> _drawRoute(
+      LatLng origin, LatLng destination, MarkerId markerId) async {
+    final String language = context.locale.languageCode;
+    final String url =
+        'https://maps.googleapis.com/maps/api/directions/json?origin='
+        '${origin.latitude},${origin.longitude}&destination='
+        '${destination.latitude},${destination.longitude}&key=${Config.googleMapsApiKey}&language=$language';
+
+    try {
+      final response =
+          await http.get(Uri.parse(url)); // Use http.get to fetch directions
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body); // Decode the JSON response
+
+        if (data['routes'].isNotEmpty) {
+          final route = data['routes'][0];
+
+          // Extract polyline, distance, duration, and steps
+          final points = route['overview_polyline']['points'];
+          final distance = route['legs'][0]['distance']['text'];
+          final duration = route['legs'][0]['duration']['text'];
+
+          List<String> steps = [];
+          for (var step in route['legs'][0]['steps']) {
+            steps.add(
+                step['html_instructions']); // Extract turn-by-turn instructions
+          }
+
+          // Update the marker info with the extracted data
+          setState(() {
+            _addPolyline(points); // Draw the polyline on the map
+
+            // Update the MarkerInfo for the selected destination
+            if (_markerInfoMap.containsKey(markerId)) {
+              _markerInfoMap[markerId] = MarkerInfo(
+                isParking: false,
+
+                id: _markerInfoMap[markerId]!.id,
+                model: _markerInfoMap[markerId]!.model,
+                isAvailable: _markerInfoMap[markerId]!.isAvailable,
+                vehicle: _markerInfoMap[markerId]!.vehicle,
+                isDestination: true,
+                distance: distance,
+                // Set the distance
+                duration: duration,
+                // Set the duration
+                steps: steps, // Set the turn-by-turn instructions
+              );
+            }
+          });
+        } else {
+           Fluttertoast.showToast(
+              msg:  'No routes found',
+              toastLength: Toast.LENGTH_SHORT,
+              gravity: ToastGravity.BOTTOM,
+              timeInSecForIosWeb: 1,
+              backgroundColor: Colors.black,
+              textColor: Colors.white,
+              fontSize: 16.0
+          );  }
+      } else {
+
+        Fluttertoast.showToast(
+            msg:  'Failed to fetch directions. Status Code: ${response.statusCode}',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Colors.black,
+            textColor: Colors.white,
+            fontSize: 16.0
+        );  }
+    } catch (e) {
+      print('Error fetching directions: $e');
+    }
+  }
+
+  void _addPolyline(String encodedPolyline) {
+    List<LatLng> polylinePoints = decodePolyline(encodedPolyline);
+    setState(() {
+      _polylines.clear(); // Clear any previous polylines
+      _polylines.add(
+        Polyline(
+          polylineId: PolylineId('route'),
+          visible: true,
+          points: polylinePoints,
+          color: Colors.blue,
+          width: 5,
+        ),
+      );
+    });
+  }
 }

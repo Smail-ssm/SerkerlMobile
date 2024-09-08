@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class InfoButton extends StatelessWidget {
@@ -27,7 +26,7 @@ class InfoButton extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8.0), // Rounded corners for the button
             ),
-            constraints: BoxConstraints.tightFor(
+            constraints: const BoxConstraints.tightFor(
               width: 48.0, // Button width
               height: 48.0, // Button height
             ),

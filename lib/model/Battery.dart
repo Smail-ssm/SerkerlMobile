@@ -4,7 +4,7 @@ class Battery {
   String type; // Type of the battery (e.g., Lithium-ion, Lead-acid)
   double capacity; // Capacity of the battery in Ah or kWh
   String manufacturer; // Manufacturer of the battery
-  String level; // Manufacturer of the battery
+  double level; // Manufacturer of the battery
 
   Battery({
     required this.id,
@@ -18,14 +18,15 @@ class Battery {
   // Factory constructor for creating a Battery from a JSON object
   factory Battery.fromJson(Map<String, dynamic> json) {
     return Battery(
-      id: json['id'],
-      vehicleId: json['vehicleId'],
-      type: json['type'],
-      capacity: json['capacity'].toDouble(),
-      manufacturer: json['manufacturer'],
-      level: json['level'],
+      id: json['id'] ?? '',  // Default to an empty string if null
+      vehicleId: json['vehicleId'] ?? '',  // Default to an empty string if null
+      type: json['type'] ?? '',  // Default to an empty string if null
+      capacity: (json['capacity'] != null) ? json['capacity'].toDouble() : 0.0,  // Default to 0.0 if null
+      manufacturer: json['manufacturer'] ?? '',  // Default to an empty string if null
+      level:  (json['level'] != null) ? json['level'].toDouble() : 0.0,  // Default to 0 if null
     );
   }
+
 
   // Method for converting a Battery instance to a JSON object
   Map<String, dynamic> toJson() {

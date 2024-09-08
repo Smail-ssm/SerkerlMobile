@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../util/AppLocalization.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -11,53 +10,108 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  late Locale _selectedLocale;
+  Locale _selectedLocale = const Locale('en', 'US'); // Default locale
 
   @override
   void initState() {
     super.initState();
-    // Initialize the selected locale with the current locale
-    _selectedLocale = AppLocalization.currentLocale(context);
+    _loadLocale(); // Load saved locale
   }
 
-  // Function to handle language change
+  // Load the saved locale from SharedPreferences
+  Future<void> _loadLocale() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? languageCode = prefs.getString('languageCode');
+    String? countryCode = prefs.getString('countryCode');
+    if (languageCode != null && countryCode != null) {
+      setState(() {
+        _selectedLocale = Locale(languageCode, countryCode);
+      });
+    }
+  }
+
+  // Save and change the language
   void _changeLanguage(Locale locale) async {
     setState(() {
-      _selectedLocale = locale; // Update the selected locale
+      _selectedLocale = locale;
     });
+
     // Save the selected locale to SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString('languageCode', locale.languageCode);
-    // Force the app to rebuild with the new locale
-    AppLocalization.load(locale);
-    setState(() {}); // Rebuild the UI
+    await prefs.setString('countryCode', locale.countryCode ?? '');
+
+    // Change the locale dynamically
+    context.setLocale(locale); // This will change the locale in the app at runtime
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: Text('settings'.tr()), // Localized app bar title
       ),
       body: ListView(
         children: [
-          ListTile(
-            title: const Text('English'),
-            onTap: () => _changeLanguage(const Locale('en', 'US')),
-            selected: _selectedLocale.languageCode == 'en',
+          _buildSectionTitle('general'.tr()), // General Section
+          _buildLanguageDropdown(),           // Language Selection Dropdown
+          const Divider(),
+          _buildSectionTitle('notifications'.tr()), // Notifications Section
+          _buildNotificationSettings(),
+        ],
+      ),
+    );
+  }
+
+  // Build section title for different settings sections
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Text(
+        title,
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  // Build the language dropdown for selecting the app language
+  Widget _buildLanguageDropdown() {
+    return ListTile(
+      title: Text('language'.tr()), // Localized text for 'Language'
+      subtitle: DropdownButton<Locale>(
+        value: _selectedLocale,
+        onChanged: (Locale? newLocale) {
+          if (newLocale != null) {
+            _changeLanguage(newLocale);
+          }
+        },
+        items: const [
+          DropdownMenuItem(
+            value: Locale('en', 'US'),
+            child: Text('English'),
           ),
-          ListTile(
-            title: const Text('French'),
-            onTap: () => _changeLanguage(const Locale('fr', 'FR')),
-            selected: _selectedLocale.languageCode == 'fr',
+          DropdownMenuItem(
+            value: Locale('fr', 'FR'),
+            child: Text('Français'),
           ),
-          ListTile(
-            title: const Text('Arabic'),
-            onTap: () => _changeLanguage(const Locale('ar', 'DZ')),
-            selected: _selectedLocale.languageCode == 'ar',
+          DropdownMenuItem(
+            value: Locale('ar', 'TN'),
+            child: Text('العربية'),
           ),
         ],
       ),
+    );
+  }
+
+
+  // Placeholder for notification settings, you can add real functionality here
+  Widget _buildNotificationSettings() {
+    return SwitchListTile(
+      title: Text('enableNotifications'.tr()), // Localized text for 'Enable Notifications'
+      value: true, // This can be replaced with a real preference
+      onChanged: (bool value) {
+        // Handle notification setting here
+      },
     );
   }
 }

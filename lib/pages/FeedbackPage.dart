@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
@@ -25,7 +26,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'We are always looking to improve the app experience for our riders. Please enter your feedback here.',
               style: TextStyle(fontSize: 16),
             ),
@@ -40,7 +41,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
             const SizedBox(height: 16),
             Row(
               children: [
-                Text('Add picture (optional)'),
+                const Text('Add picture (optional)'),
                 const SizedBox(width: 8),
                 IconButton(
                   onPressed: _selectProfilePicture,
@@ -80,9 +81,17 @@ class _FeedbackPageState extends State<FeedbackPage> {
 
   Future<void> _submitFeedback() async {
     // Implement your feedback submission logic here
-    print('Feedback submitted:\n'
-        'Email: ${_emailController.text}\n'
-        'Feedback: ${_feedbackController.text}\n'
-        'Image: ${_image?.path}');
+    Fluttertoast.showToast(
+        msg: 'Feedback submitted:\n'
+            'Email: ${_emailController.text}\n'
+            'Feedback: ${_feedbackController.text}\n'
+            'Image: ${_image?.path}' ,
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.black,
+        textColor: Colors.white,
+        fontSize: 16.0
+    );
   }
 }

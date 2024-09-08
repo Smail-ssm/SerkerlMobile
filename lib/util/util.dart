@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,17 +7,27 @@ import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../model/LocationInfo.dart';
 import '../model/client.dart';
 import '../model/vehicule.dart';
+import 'Config.dart';
+import 'package:http/http.dart' as http;
 
-BitmapDescriptor getMarkerIconForVehicle(
-  Vehicle vehicle,
-  BitmapDescriptor scooterIcon,
-  BitmapDescriptor ebikeIcon,
-) {
+BitmapDescriptor getMarkerIcon(
+    Vehicle? vehicle, // Vehicle can be null
+    BitmapDescriptor scooterIcon,
+    BitmapDescriptor ebikeIcon,
+    BitmapDescriptor parkingIcon, // Pass the custom parking icon
+    ) {
+  if (vehicle == null) {
+    return parkingIcon; // Return parking icon if no vehicle is passed
+  }
+
+  // Check vehicle type and return the corresponding icon
   if (vehicle.model.toLowerCase().contains('scooter')) {
     return scooterIcon;
   } else if (vehicle.model.toLowerCase().contains('ebike')) {
@@ -25,6 +36,7 @@ BitmapDescriptor getMarkerIconForVehicle(
     return BitmapDescriptor.defaultMarker; // Fallback if no model matches
   }
 }
+
 
 void showMessageDialog(BuildContext context, String message) {
   showDialog(
@@ -135,33 +147,24 @@ Future<Client?> fetchClientData(String userId) async {
 
   final usersCollection = firestore.collection(getFirestoreDocument());
 
-  if (userId != null) {
-    try {
-      // Retrieve user document from Firestore using the user ID
-      DocumentSnapshot userDoc = await usersCollection
-          .doc('users')
-          .collection(userId)
-          .doc('user')
-          .get();
+  try {
+    // Retrieve user document from Firestore using the user ID
+    DocumentSnapshot userDoc =
+        await usersCollection.doc('users').collection(userId).doc('user').get();
 
-      // Check if the user document exists
-      if (userDoc.exists) {
-        // Convert the Firestore document data to a Client object
-        Client retrievedUserData =
-            Client.fromFirestore(userDoc.data() as Map<String, dynamic>);
-        return retrievedUserData;
-      } else {
-        print('User document does not exist');
-        return null;
-      }
-    } catch (e) {
-      // Handle any errors that occur during the process
-      print('Error fetching user data by user ID: ' + e.toString());
+    // Check if the user document exists
+    if (userDoc.exists) {
+      // Convert the Firestore document data to a Client object
+      Client retrievedUserData =
+          Client.fromFirestore(userDoc.data() as Map<String, dynamic>);
+      return retrievedUserData;
+    } else {
+      print('User document does not exist');
       return null;
     }
-  } else {
-    // Handle case when user ID is not available in SharedPreferences
-    print('User ID not found in SharedPreferences');
+  } catch (e) {
+    // Handle any errors that occur during the process
+    print('Error fetching user data by user ID: ' + e.toString());
     return null;
   }
 }
@@ -190,6 +193,22 @@ Future<BitmapDescriptor> createCustomIcon(
   final buffer = byteData!.buffer.asUint8List();
 
   return BitmapDescriptor.fromBytes(buffer);
+}
+void requestPermissions(BuildContext context) async {
+  LocationPermission permission = await Geolocator.checkPermission();
+  if (permission == LocationPermission.denied) {
+    permission = await Geolocator.requestPermission();
+    if (permission == LocationPermission.denied) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Location permissions are denied')),
+      );
+    } else if (permission == LocationPermission.deniedForever) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Location permissions are permanently denied')),
+      );
+    }
+  }
 }
 
 class IconPainter extends CustomPainter {
@@ -226,4 +245,93 @@ class IconPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
+Future<LocationInfo?> getAddressFromLatLng(double lat, double lng) async {
+  String _host = 'https://maps.googleapis.com/maps/api/geocode/json';
+  final url =
+      '$_host?key=${Config.googleMapsApiKey}&language=en&latlng=$lat,$lng';
+
+  var response = await http.get(Uri.parse(url));
+  if (response.statusCode == 200) {
+    Map data = jsonDecode(response.body);
+    String _formattedAddress = data["results"][0]["formatted_address"];
+    print("response ==== $_formattedAddress");
+    return LocationInfo(address: _formattedAddress);
+  } else {
+    print('Failed to load address');
+    return null;
+  }
+}
+// Polyline decoder method
+List<LatLng> decodePolyline(String polyline) {
+  List<LatLng> points = [];
+  int index = 0, len = polyline.length;
+  int lat = 0, lng = 0;
+
+  while (index < len) {
+    int b, shift = 0, result = 0;
+    do {
+      b = polyline.codeUnitAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+    lat += dlat;
+
+    shift = 0;
+    result = 0;
+    do {
+      b = polyline.codeUnitAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+    lng += dlng;
+
+    points.add(LatLng(lat / 1E5, lng / 1E5));
+  }
+
+  return points;
+}
+Widget buildListTile(
+    String title,
+    IconData icon,
+    VoidCallback onTap, {
+      String? value,
+    }) {
+  return ListTile(
+    leading: Icon(icon),
+    title: Text(title),
+    subtitle: value != null ? Text(value) : null,
+    onTap: onTap,
+  );
+}
+
+// Function to calculate distance between two LatLng points (Haversine Formula)
+double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+  const double R = 6371000; // Radius of the Earth in meters
+  double dLat = _degToRad(lat2 - lat1);
+  double dLon = _degToRad(lon2 - lon1);
+  double a = sin(dLat / 2) * sin(dLat / 2) +
+      cos(_degToRad(lat1)) * cos(_degToRad(lat2)) *
+          sin(dLon / 2) * sin(dLon / 2);
+  double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+  return R * c; // Distance in meters
+}
+
+double _degToRad(double deg) {
+  return deg * (pi / 180);
+}
+
+// Format distance in kilometers
+String formatDistance(double distanceInMeters) {
+  double distanceInKm = distanceInMeters / 1000;
+  return '${distanceInKm.toStringAsFixed(2)} km';
+}
+
+// Format time to minutes and seconds
+String formatTime(double timeInSeconds) {
+  int minutes = (timeInSeconds / 60).floor();
+  int seconds = (timeInSeconds % 60).floor();
+  return '${minutes}m ${seconds}s';
 }
