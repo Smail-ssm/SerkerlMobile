@@ -5,6 +5,7 @@ import 'package:ebike/util/util.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
@@ -23,34 +24,36 @@ class _SignUpPageState extends State<SignUpPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  late TextEditingController _emailController;
+  late TextEditingController _emailOrPhoneController;
   late TextEditingController _passwordController;
   late TextEditingController _usernameController;
   late TextEditingController _fullNameController;
   late TextEditingController _dateOfBirthController;
-  late TextEditingController _phoneNumberController;
   late TextEditingController _addressController;
   late TextEditingController _roleController;
+  late TextEditingController _otpController;
 
   bool _isLoading = false;
+  bool _isPhoneNumber = false; // To check if the user is using phone number
+  bool _isOtpSent = false; // To track if OTP is sent
+  String _verificationId = ''; // Store the verification ID
   File? _profilePicture;
 
   @override
   void initState() {
     super.initState();
-    _emailController = TextEditingController(text: widget.user?.email ?? '');
+    _emailOrPhoneController = TextEditingController(text: widget.user?.email ?? '');
     _passwordController = TextEditingController();
     _usernameController = TextEditingController();
     _fullNameController = TextEditingController();
     _dateOfBirthController = TextEditingController();
-    _phoneNumberController = TextEditingController();
     _addressController = TextEditingController();
     _roleController = TextEditingController();
+    _otpController = TextEditingController();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Get theme data
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 
@@ -79,42 +82,49 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                   const SizedBox(height: 30.0),
                   _buildTextField(
-                      _emailController, 'Email', Icons.email, TextInputType.emailAddress),
+                      _emailOrPhoneController, 'Email or Phone Number', Icons.email, TextInputType.text),
                   const SizedBox(height: 20.0),
-                  _buildTextField(
-                    _passwordController,
-                    'Password',
-                    Icons.lock,
-                    TextInputType.visiblePassword,
-                   ),
-                  const SizedBox(height: 20.0),
+                  if (!_isPhoneNumber) ...[
+                    _buildTextField(
+                      _passwordController,
+                      'Password',
+                      Icons.lock,
+                      TextInputType.visiblePassword,
+                    ),
+                    const SizedBox(height: 20.0),
+                  ],
                   _buildTextField(_usernameController, 'Username', Icons.person),
                   const SizedBox(height: 20.0),
                   _buildTextField(_fullNameController, 'Full Name', Icons.person_outline),
                   const SizedBox(height: 20.0),
                   _buildDateOfBirthField(),
                   const SizedBox(height: 20.0),
-                  _buildTextField(_phoneNumberController, 'Phone Number', Icons.phone,
-                      TextInputType.phone),
-                  const SizedBox(height: 20.0),
                   _buildTextField(_addressController, 'Address', Icons.location_on),
                   const SizedBox(height: 20.0),
                   _buildTextField(_roleController, 'Role/Permissions', Icons.security),
+                  if (_isPhoneNumber && _isOtpSent) ...[
+                    const SizedBox(height: 20.0),
+                    _buildTextField(
+                      _otpController,
+                      'Enter OTP',
+                      Icons.message,
+                      TextInputType.number,
+                    ),
+                  ],
                   const SizedBox(height: 20.0),
                   ElevatedButton.icon(
                     onPressed: _selectProfilePicture,
                     icon: const Icon(Icons.photo),
                     label: const Text('Select Profile Picture'),
                   ),
-                  _profilePicture != null
-                      ? Padding(
-                    padding: const EdgeInsets.only(top: 12.0),
-                    child: Image.file(
-                      _profilePicture!,
-                      height: 100.0,
+                  if (_profilePicture != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12.0),
+                      child: Image.file(
+                        _profilePicture!,
+                        height: 100.0,
+                      ),
                     ),
-                  )
-                      : const SizedBox(),
                   const SizedBox(height: 30.0),
                   _buildSignUpButton(),
                 ],
@@ -156,6 +166,11 @@ class _SignUpPageState extends State<SignUpPage> {
             prefixIcon: Icon(icon, color: theme.iconTheme.color),
             hintText: 'Enter your $label',
           ),
+          onChanged: (value) {
+            setState(() {
+              _isPhoneNumber = _isPhone(value);
+            });
+          },
         ),
       ],
     );
@@ -183,16 +198,16 @@ class _SignUpPageState extends State<SignUpPage> {
       padding: const EdgeInsets.symmetric(vertical: 25.0),
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: _signUp,
+        onPressed: _isOtpSent ? _verifyOtp : _signUp,
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.all(15.0),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30.0),
           ),
         ),
-        child: const Text(
-          'SIGN UP',
-          style: TextStyle(
+        child: Text(
+          _isOtpSent ? 'Verify OTP' : 'SIGN UP',
+          style: const TextStyle(
             letterSpacing: 1.5,
             fontSize: 18.0,
             fontWeight: FontWeight.bold,
@@ -228,106 +243,127 @@ class _SignUpPageState extends State<SignUpPage> {
     }
   }
 
-  Future<void> _signUp() async {
+  void _signUp() async {
     setState(() {
       _isLoading = true;
     });
-    UserCredential? userCredential;
 
     try {
-      // Validate the form
-      if (!_validateForm(
-          _emailController,
-          _passwordController,
-          _usernameController,
-          _fullNameController,
-          context)) {
-        setState(() {
-          _isLoading = false;
-        });
-        return;
+      if (_isPhoneNumber) {
+        // Send OTP to phone number
+        await _auth.verifyPhoneNumber(
+          phoneNumber: _emailOrPhoneController.text.trim(),
+          verificationCompleted: (PhoneAuthCredential credential) async {
+            // Auto-sign-in on verification completion
+            await _auth.signInWithCredential(credential);
+            _createUserInFirestore(FirebaseAuth.instance.currentUser!);
+          },
+          verificationFailed: (FirebaseAuthException e) {
+            _showErrorDialog(context, e.message ?? 'OTP verification failed');
+          },
+          codeSent: (String verificationId, int? resendToken) {
+            setState(() {
+              _isOtpSent = true;
+              _verificationId = verificationId;
+            });
+            _showToast('OTP sent to your phone number');
+          },
+          codeAutoRetrievalTimeout: (String verificationId) {
+            _verificationId = verificationId;
+          },
+          timeout: const Duration(seconds: 60),
+        );
+      } else {
+        // Email sign up
+        if (!_validateForm(_emailOrPhoneController, _passwordController, _usernameController, _fullNameController, context)) {
+          setState(() {
+            _isLoading = false;
+          });
+          return;
+        }
+
+        final userCredential = await _auth.createUserWithEmailAndPassword(
+          email: _emailOrPhoneController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+
+        _createUserInFirestore(userCredential.user!);
       }
-
-      // Create the user with Firebase Authentication
-      userCredential = await _auth.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-
-      // Upload profile picture if present
-      String? profilePictureUrl;
-      if (_profilePicture != null) {
-        // Get the file name with extension
-        String fileName = _profilePicture!.path.split('/').last;
-        final storageRef = firebase_storage.FirebaseStorage.instance
-            .ref()
-            .child('profile_pictures/${userCredential.user!.uid}/$fileName');
-        final uploadTask = storageRef.putFile(_profilePicture!);
-        await uploadTask.whenComplete(() async {
-          profilePictureUrl = await storageRef.getDownloadURL();
-        });
-      }
-
-      // Get the environment collection name (e.g., 'preprod')
-      final String env = getFirestoreDocument();
-
-      // Reference to the user document under the path /{env}/users/users/{userId}
-      final userDocRef = _firestore
-          .collection(env) // Environment collection
-          .doc('users') // 'users' document
-          .collection('users') // 'users' collection under 'users' document
-          .doc(userCredential.user!.uid); // User's document with userId
-
-      // Set the user data directly in the user's document
-      await userDocRef.set({
-        'userId': userCredential.user!.uid,
-        'email': _emailController.text.trim(),
-        'username': _usernameController.text.trim(),
-        'fullName': _fullNameController.text.trim(),
-        'profilePictureUrl': profilePictureUrl ?? 'NO IMAGE',
-        'dateOfBirth': _dateOfBirthController.text.isNotEmpty
-            ? DateTime.parse(_dateOfBirthController.text)
-            : null,
-        'phoneNumber': _phoneNumberController.text.trim(),
-        'address': _addressController.text.trim(),
-        'role': _roleController.text.trim(),
-        'creationDate': FieldValue.serverTimestamp(),
-      });
-
-      // Save userId locally if needed
-      saveSP('userId', userCredential.user!.uid);
-
-      // Navigate to the SignInPage or any other page
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const SignInPage()),
-      );
     } catch (e) {
-      // If user creation failed, delete the user from Firebase Auth
-      if (userCredential != null) {
-        await userCredential.user?.delete();
-      }
-      // Show an error dialog
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: const Text('Sign Up Failed'),
-            content: Text(e.toString()),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
+      _showErrorDialog(context, e.toString());
     } finally {
       setState(() {
         _isLoading = false;
       });
     }
+  }
+
+
+  void _verifyOtp() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final AuthCredential credential = PhoneAuthProvider.credential(
+        verificationId: _verificationId,
+        smsCode: _otpController.text.trim(),
+      );
+      final UserCredential userCredential = await _auth.signInWithCredential(credential);
+
+      _createUserInFirestore(userCredential.user!);
+    } catch (e) {
+      _showErrorDialog(context, e.toString());
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _createUserInFirestore(User user) async {
+    // Upload profile picture if present
+    String? profilePictureUrl;
+    if (_profilePicture != null) {
+      String fileName = _profilePicture!.path.split('/').last;
+      final storageRef = firebase_storage.FirebaseStorage.instance
+          .ref()
+          .child('profile_pictures/${user.uid}/$fileName');
+      final uploadTask = storageRef.putFile(_profilePicture!);
+      await uploadTask.whenComplete(() async {
+        profilePictureUrl = await storageRef.getDownloadURL();
+      });
+    }
+
+    final String env = getFirestoreDocument();
+
+    final userDocRef = _firestore
+        .collection(env)
+        .doc('users')
+        .collection('users')
+        .doc(user.uid);
+
+    await userDocRef.set({
+      'userId': user.uid,
+      'email': user.email ?? '',
+      'username': _usernameController.text.trim(),
+      'fullName': _fullNameController.text.trim(),
+      'profilePictureUrl': profilePictureUrl ?? 'NO IMAGE',
+      'dateOfBirth': _dateOfBirthController.text.isNotEmpty
+          ? DateTime.parse(_dateOfBirthController.text)
+          : null,
+      'phoneNumber': user.phoneNumber ?? _emailOrPhoneController.text.trim(),
+      'address': _addressController.text.trim(),
+      'role': _roleController.text.trim(),
+      'creationDate': FieldValue.serverTimestamp(),
+    });
+
+    saveSP('userId', user.uid);
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const SignInPage()),
+    );
   }
 
   bool _validateForm(
@@ -337,28 +373,62 @@ class _SignUpPageState extends State<SignUpPage> {
       TextEditingController fullNameController,
       BuildContext context,
       ) {
-    if (emailController.text.isEmpty ||
+    if (!_isPhoneNumber && (emailController.text.isEmpty ||
         passwordController.text.isEmpty ||
         usernameController.text.isEmpty ||
-        fullNameController.text.isEmpty) {
+        fullNameController.text.isEmpty)) {
       showMessageDialog(
           context, 'Validation Error', 'Please fill in all required fields.');
       return false;
     }
 
-    if (!isValidEmail(emailController.text)) {
+    if (!_isPhoneNumber && !isValidEmail(emailController.text)) {
       showMessageDialog(
           context, 'Validation Error', 'Please enter a valid email address.');
       return false;
     }
 
-    if (passwordController.text.length < 6) {
+    if (!_isPhoneNumber && passwordController.text.length < 6) {
       showMessageDialog(context, 'Validation Error',
           'Password must be at least 6 characters long.');
       return false;
     }
 
     return true;
+  }
+
+  bool _isPhone(String input) {
+    final RegExp phoneRegex = RegExp(r'^\+[1-9]\d{1,14}$');
+    return phoneRegex.hasMatch(input);
+  }
+
+  void _showToast(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: Colors.black,
+      textColor: Colors.white,
+      fontSize: 16.0,
+    );
+  }
+
+  void _showErrorDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Sign Up Failed'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void showMessageDialog(BuildContext context, String title, String message) {

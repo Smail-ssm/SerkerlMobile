@@ -15,6 +15,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "692724012595-tei2ojo71mb8eelmp23607pbrl15i7ga.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.xdev.ebike.ebike",
+            "certificate_hash": "bf647102d2bb3c65892c434450be2e3c41279c07"
+          }
+        },
+        {
           "client_id": "692724012595-dt9f2feoutehcpoknmu8772i6mtmucq8.apps.googleusercontent.com",
           "client_type": 3
         }

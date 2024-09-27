@@ -15,6 +15,7 @@ class Parking {
   String closingTime;
   LatLng coordinates; // Single point location for parking
   Timestamp createdAt; // Optional timestamp for created date
+  List<String> images; // List of image URLs
 
   Parking({
     required this.id,
@@ -28,6 +29,7 @@ class Parking {
     required this.closingTime,
     required this.coordinates,
     required this.createdAt,
+    required this.images,
   });
 
   // Factory constructor for creating a Parking from a JSON object
@@ -58,6 +60,7 @@ class Parking {
       closingTime: json['closingTime'] ?? '00:00',
       coordinates: coordinates, // Set the parsed coordinates here
       createdAt: json['createdAt'] ?? Timestamp.now(),
+      images: List<String>.from(json['images'] ?? []),
     );
   }
 
@@ -78,6 +81,7 @@ class Parking {
         'lng': coordinates.longitude,
       },
       'createdAt': createdAt,
+      'images': images,
     };
   }
 }

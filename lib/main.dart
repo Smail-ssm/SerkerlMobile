@@ -95,10 +95,10 @@ void main() async {
 
   runApp(
     EasyLocalization(
-      supportedLocales: [Locale('en', 'US'), Locale('fr', 'FR'), Locale('ar', 'TN')],
+      supportedLocales: [const Locale('en', 'US'), const Locale('fr', 'FR'), const Locale('ar', 'TN')],
       path: 'assets/translations',
-      fallbackLocale: Locale('en', 'US'),
-      child: MyApp(),
+      fallbackLocale: const Locale('en', 'US'),
+      child: const MyApp(),
     ),
   );
 }
@@ -123,10 +123,10 @@ class MyApp extends StatelessWidget {
       themeMode: ThemeMode.system,
       initialRoute: '/',
       routes: {
-        '/': (context) => SplashScreen(),
-        '/onboarding': (context) => OnboardingPage(),
-        '/home': (context) => MapPage(),
-        '/signin': (context) => SignInPage(),
+        '/': (context) => const SplashScreen(),
+        '/onboarding': (context) => const OnboardingPage(),
+        '/home': (context) => const MapPage(),
+        '/signin': (context) => const SignInPage(),
       },
     );
   }

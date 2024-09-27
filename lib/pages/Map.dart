@@ -32,7 +32,6 @@ import '../widgets/bottomWidget.dart';
 import '../widgets/infoBUtton.dart';
 import '../widgets/menuButton.dart';
 import '../widgets/share_bottom_sheet.dart';
-import 'BalancePage.dart';
 import 'ClientProfilePage.dart';
 import 'History.dart';
 import 'SupportPage.dart';
@@ -487,52 +486,144 @@ class _MapPageState extends State<MapPage> {
   }
 
   void _showParkingDetails(Parking parking) {
-    final isDarkMode = Theme.of(context).brightness ==
-        Brightness.dark; // Check if dark mode is active
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     showModalBottomSheet(
       context: context,
-      builder: (BuildContext context) {
-        return Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Container(
-            color: isDarkMode ? Colors.black : Colors.white,
-            // Set background color based on theme
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Text('Parking: ${parking.name}',
-                    style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 10),
-                Text('Address: ${parking.address}',
-                    style: Theme.of(context).textTheme.bodyLarge),
-                const SizedBox(height: 10),
-                Text('Status: ${parking.isOpen ? "Open" : "Closed"}',
-                    style: Theme.of(context).textTheme.bodyLarge),
-                Text(
-                    'Capacity: ${parking.currentCapacity}/${parking.maxCapacity}',
-                    style: Theme.of(context).textTheme.bodyLarge),
-                const SizedBox(height: 20),
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isDarkMode
-                          ? Colors.grey[700]
-                          : Colors.blue, // Adjust button color
+      isScrollControlled: true,
+      backgroundColor: isDarkMode ? Colors.black : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          expand: false,
+          builder: (context, scrollController) {
+            return SingleChildScrollView(
+              controller: scrollController,
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    // Parking Name
+                    Text(
+                      parking.name,
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: const Text('Close'),
-                  ),
+                    SizedBox(height: 8),
+                    // Parking Address
+                    Row(
+                      children: [
+                        Icon(Icons.location_on, color: Colors.grey),
+                        SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            parking.address,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16),
+                    // Status and Capacity
+                    Row(
+                      children: [
+                        Text(
+                          'Status: ',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        Text(
+                          parking.isOpen ? 'Open' : 'Closed',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: parking.isOpen ? Colors.green : Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Capacity: ${parking.currentCapacity}/${parking.maxCapacity}',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    SizedBox(height: 8),
+                    // Opening Hours
+                    Text(
+                      'Hours: ${parking.openingTime} - ${parking.closingTime}',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    SizedBox(height: 16),
+                    // Parking Pictures (if available)
+                    _buildParkingImages(parking),
+                    SizedBox(height: 16),
+                    // Close Button
+                    Align(
+                      alignment: Alignment.bottomRight,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDarkMode ? Colors.grey[700] : Colors.blue,
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text('Close'),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
+    );
+  }
+  Widget _buildParkingImages(Parking parking) {
+    if (parking.images.isEmpty) {
+      return Text('No images available.');
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Photos',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        SizedBox(height: 8),
+        Container(
+          height: 200,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: parking.images.length,
+            itemBuilder: (context, index) {
+              final imageUrl = parking.images[index];
+              return Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    imageUrl,
+                    width: 300,
+                    height: 200,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: 300,
+                        height: 200,
+                        color: Colors.grey[300],
+                        child: Icon(Icons.broken_image, size: 50, color: Colors.grey),
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -1034,20 +1125,10 @@ class _MapPageState extends State<MapPage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => BalancePage(client: widget.client)),
+                    builder: (context) => BalanceAndPricingPage (client: widget.client)),
               );
             },
             value: "0",
-          ),
-          buildListTile(
-            'Subscriptions',
-            Icons.subscriptions,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const PricingWidget()),
-              );
-            },
           ),
           buildListTile(
             'Ride history',

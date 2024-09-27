@@ -127,6 +127,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
   Future<void> _onDonePress() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool('seenOnboarding', true);
-    Navigator.of(context).pushReplacementNamed('/home');
+    Navigator.of(context).pushReplacementNamed('/signin');
   }
 }

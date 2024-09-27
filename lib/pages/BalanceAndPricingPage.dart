@@ -4,10 +4,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:checkout_screen_ui/checkout_page/checkout_page.dart';
 import 'package:checkout_screen_ui/models/price_item.dart';
 import 'package:checkout_screen_ui/ui_components/pay_button.dart';
-import 'package:intl/intl.dart'; // For currency formatting
-import '../model/client.dart';
 import '../services/SubscriptionService.dart';
 import '../model/subscription.dart';
+import '../model/client.dart';
 import '../util/theme.dart';
 
 class BalanceAndPricingPage extends StatefulWidget {
@@ -30,12 +29,6 @@ class _BalanceAndPricingPageState extends State<BalanceAndPricingPage> {
   // GlobalKeys for the checkout form
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final GlobalKey<CardPayButtonState> _payBtnKey = GlobalKey<CardPayButtonState>();
-
-  // Cost per minute in TND
-  final double costPerMinute = 0.85; // Adjusted to TND
-
-  // Currency formatter for TND
-  final NumberFormat currencyFormat = NumberFormat.currency(locale: 'fr_TN', symbol: 'TND ');
 
   @override
   void initState() {
@@ -320,18 +313,11 @@ class _BalanceAndPricingPageState extends State<BalanceAndPricingPage> {
         return _buildPricingCard(
           subscription.title,
           '${subscription.validDays} days',
-          '${currencyFormat.format(subscription.price)}',
+          '${subscription.price} €',
           onTap: () => _showCheckoutScreen(subscription),
         );
       }).toList(),
     );
-  }
-
-  // Calculate ride time based on balance
-  double _calculateRideTime(double balance) {
-    // Calculate the total minutes based on balance and cost per minute
-    double totalMinutes = balance / costPerMinute;
-    return totalMinutes;
   }
 
   Widget _buildContent() {
@@ -342,66 +328,30 @@ class _BalanceAndPricingPageState extends State<BalanceAndPricingPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Display Balance with Ride Time
+            // Display Balance
             Card(
               elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    // Balance in TND on the left
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Balance',
-                            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            currencyFormat.format(_balance),
-                            style: TextStyle(fontSize: 24, color: Colors.green, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Divider between balance and ride time
-                    Container(
-                      width: 1,
-                      height: 60,
-                      color: Colors.grey[300],
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                    ),
-                    // Equivalent ride time on the right
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            'Ride Time',
-                            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            '${_calculateRideTime(_balance).toStringAsFixed(1)} mins',
-                            style: TextStyle(fontSize: 24, color: Colors.blue, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+              child: ListTile(
+                leading: Icon(Icons.account_balance_wallet, size: 50),
+                title: Text(
+                  'Current Balance',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  '\$${_balance.toStringAsFixed(2)}',
+                  style: TextStyle(fontSize: 24, color: Colors.green),
+                ),
+                trailing: IconButton(
+                  icon: Icon(Icons.refresh, color: Colors.blue, size: 30),
+                  onPressed: _fetchLatestBalance,
+                  tooltip: 'Refresh Balance',
                 ),
               ),
             ),
             const SizedBox(height: 20),
             _buildSectionTitle('Pay Per Ride'),
-            _buildPricingCard('E-bikes', '24/7', '1 TND unlock + 0.85 TND/min'),
-            _buildPricingCard('Scooters', '24/7', '1 TND unlock + 0.85 TND/min'),
+            _buildPricingCard('E-bikes', '24/7', '1 € unlock + 0.26 €/min'),
+            _buildPricingCard('Scooters', '24/7', '1 € unlock + 0.26 €/min'),
             _buildSectionTitle('Memberships'),
             ElevatedButton(
               onPressed: () {
