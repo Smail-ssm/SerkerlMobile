@@ -189,6 +189,7 @@ class _UserProfileEditPageState extends State<UserProfileEditPage> {
       // Use the new or existing URL
       creationDate: widget.client!.creationDate,
       password: '',
+      balance: widget.client!.balance,
       fcmToken: await  getSP("fcmToken"),
       dateOfBirth: widget.client!.dateOfBirth,
     );

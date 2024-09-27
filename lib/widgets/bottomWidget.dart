@@ -16,7 +16,7 @@ class VehicleBottomSheet extends StatelessWidget {
 
   final BuildContext context;
   final MarkerInfo markerInfo;
-  final LatLng currentLocation;
+  final LatLng? currentLocation;
   final Function(LatLng origin, LatLng destination, MarkerId markerId) drawRoute;
 
   @override
@@ -28,8 +28,8 @@ class VehicleBottomSheet extends StatelessWidget {
 
     // Calculate the distance between the current location and the vehicle location
     double distance = _calculateDistance(
-      currentLocation.latitude,
-      currentLocation.longitude,
+      currentLocation!.latitude,
+      currentLocation!.longitude,
       vehicleLocation.latitude,
       vehicleLocation.longitude,
     );

@@ -1,12 +1,12 @@
 import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:ebike/pages/signin_page.dart';
 import 'package:ebike/util/util.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart'; // Import the intl package
+import 'package:intl/intl.dart';
 
 import 'Map.dart'; // Import your home page or the next page after signing up
 
@@ -50,88 +50,153 @@ class _SignUpPageState extends State<SignUpPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Get theme data
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sign Up'),
       ),
-      body: SingleChildScrollView(
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
         child: Stack(
           children: [
-            // Existing form and button widgets
-            Padding(
-              padding: const EdgeInsets.all(16.0),
+            // Background color from theme
+            Container(
+              height: double.infinity,
+              width: double.infinity,
+              color: theme.scaffoldBackgroundColor,
+            ),
+            SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 20.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextField(
-                    controller: _emailController,
-                    decoration: const InputDecoration(labelText: 'Email'),
+                children: <Widget>[
+                  Text(
+                    'Create Account',
+                    style: textTheme.headlineMedium,
                   ),
-                  const SizedBox(height: 12.0),
-                  TextField(
-                    controller: _passwordController,
-                    decoration: const InputDecoration(labelText: 'Password'),
-                    obscureText: true,
-                  ),
-                  const SizedBox(height: 12.0),
-                  TextField(
-                    controller: _usernameController,
-                    decoration: const InputDecoration(labelText: 'Username'),
-                  ),
-                  const SizedBox(height: 12.0),
-                  TextField(
-                    controller: _fullNameController,
-                    decoration: const InputDecoration(labelText: 'Full Name'),
-                  ),
-                  const SizedBox(height: 12.0),
-                  TextField(
-                    controller: _dateOfBirthController,
-                    readOnly:
-                        true, // Make the field read-only to prevent manual editing
-                    decoration: InputDecoration(
-                        labelText: 'Date of Birth (YYYY-MM-DD)',
-                        suffixIcon: IconButton(
-                            icon: const Icon(Icons.calendar_today),
-                            onPressed: () => _selectDate(
-                                context) // Call function to show date picker
-                            )),
-                  ),
-                  const SizedBox(height: 12.0),
-                  TextField(
-                    controller: _phoneNumberController,
-                    decoration: const InputDecoration(labelText: 'Phone Number'),
-                    keyboardType:
-                        TextInputType.phone, // Set keyboard type to phone
-                  ),
-                  const SizedBox(height: 12.0),
-                  TextField(
-                    controller: _addressController,
-                    decoration: const InputDecoration(labelText: 'Address'),
-                  ),
-                  const SizedBox(height: 12.0),
-                  TextField(
-                    controller: _roleController,
-                    decoration: const InputDecoration(labelText: 'Role/Permissions'),
-                  ),
-                  const SizedBox(height: 16.0),
-                  ElevatedButton(
+                  const SizedBox(height: 30.0),
+                  _buildTextField(
+                      _emailController, 'Email', Icons.email, TextInputType.emailAddress),
+                  const SizedBox(height: 20.0),
+                  _buildTextField(
+                    _passwordController,
+                    'Password',
+                    Icons.lock,
+                    TextInputType.visiblePassword,
+                   ),
+                  const SizedBox(height: 20.0),
+                  _buildTextField(_usernameController, 'Username', Icons.person),
+                  const SizedBox(height: 20.0),
+                  _buildTextField(_fullNameController, 'Full Name', Icons.person_outline),
+                  const SizedBox(height: 20.0),
+                  _buildDateOfBirthField(),
+                  const SizedBox(height: 20.0),
+                  _buildTextField(_phoneNumberController, 'Phone Number', Icons.phone,
+                      TextInputType.phone),
+                  const SizedBox(height: 20.0),
+                  _buildTextField(_addressController, 'Address', Icons.location_on),
+                  const SizedBox(height: 20.0),
+                  _buildTextField(_roleController, 'Role/Permissions', Icons.security),
+                  const SizedBox(height: 20.0),
+                  ElevatedButton.icon(
                     onPressed: _selectProfilePicture,
-                    child: const Text('Select Profile Picture'),
+                    icon: const Icon(Icons.photo),
+                    label: const Text('Select Profile Picture'),
                   ),
-                  const SizedBox(height: 12.0),
                   _profilePicture != null
-                      ? Image.file(_profilePicture!)
+                      ? Padding(
+                    padding: const EdgeInsets.only(top: 12.0),
+                    child: Image.file(
+                      _profilePicture!,
+                      height: 100.0,
+                    ),
+                  )
                       : const SizedBox(),
-                  const SizedBox(height: 16.0),
-                  ElevatedButton(
-                    onPressed: _signUp,
-                    child: const Text('Sign Up'),
-                  ),
+                  const SizedBox(height: 30.0),
+                  _buildSignUpButton(),
                 ],
               ),
             ),
+            if (_isLoading)
+              Center(
+                child: CircularProgressIndicator(),
+              ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField(
+      TextEditingController controller,
+      String label,
+      IconData icon, [
+        TextInputType keyboardType = TextInputType.text,
+        bool obscureText = false,
+      ]) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          label,
+          style: theme.textTheme.bodyMedium,
+        ),
+        const SizedBox(height: 10.0),
+        TextField(
+          controller: controller,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
+          style: theme.textTheme.bodyMedium,
+          decoration: InputDecoration(
+            prefixIcon: Icon(icon, color: theme.iconTheme.color),
+            hintText: 'Enter your $label',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDateOfBirthField() {
+    final theme = Theme.of(context);
+
+    return GestureDetector(
+      onTap: () => _selectDate(context),
+      child: AbsorbPointer(
+        child: _buildTextField(
+          _dateOfBirthController,
+          'Date of Birth (YYYY-MM-DD)',
+          Icons.calendar_today,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSignUpButton() {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 25.0),
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: _signUp,
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.all(15.0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30.0),
+          ),
+        ),
+        child: const Text(
+          'SIGN UP',
+          style: TextStyle(
+            letterSpacing: 1.5,
+            fontSize: 18.0,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );
@@ -142,9 +207,7 @@ class _SignUpPageState extends State<SignUpPage> {
     final pickedFile = await imagePicker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
-        _profilePicture = File(
-          pickedFile.path,
-        );
+        _profilePicture = File(pickedFile.path);
       });
     }
   }
@@ -160,78 +223,65 @@ class _SignUpPageState extends State<SignUpPage> {
     );
 
     if (pickedDate != null) {
-      // Correctly format the date using DateFormat
       final formattedDate = DateFormat('yyyy-MM-dd').format(pickedDate);
       _dateOfBirthController.text = formattedDate;
     }
   }
 
-  _signUp() async {
+  Future<void> _signUp() async {
     setState(() {
       _isLoading = true;
     });
-    UserCredential?
-        userCredential; // Declare userCredential outside the try-catch block
+    UserCredential? userCredential;
 
     try {
-      setState(() {
-        _isLoading = true;
-      });
-
-      if (!_validateForm(_emailController, _passwordController,
-          _usernameController, _fullNameController, context)) {
+      // Validate the form
+      if (!_validateForm(
+          _emailController,
+          _passwordController,
+          _usernameController,
+          _fullNameController,
+          context)) {
         setState(() {
           _isLoading = false;
         });
         return;
       }
+
+      // Create the user with Firebase Authentication
       userCredential = await _auth.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // Step 2: Check if a profile picture was uploaded and get its URL
+      // Upload profile picture if present
       String? profilePictureUrl;
       if (_profilePicture != null) {
         // Get the file name with extension
         String fileName = _profilePicture!.path.split('/').last;
-
-        final storageRef =
-            firebase_storage.FirebaseStorage.instance.ref().child(
-                  getFirestoreDocument() +
-                      '/profile_pictures/${userCredential.user!.uid}/$fileName',
-                );
-
+        final storageRef = firebase_storage.FirebaseStorage.instance
+            .ref()
+            .child('profile_pictures/${userCredential.user!.uid}/$fileName');
         final uploadTask = storageRef.putFile(_profilePicture!);
         await uploadTask.whenComplete(() async {
           profilePictureUrl = await storageRef.getDownloadURL();
         });
       }
 
-      // Step 3: Create user credentials with email and password
+      // Get the environment collection name (e.g., 'preprod')
+      final String env = getFirestoreDocument();
 
-      // Step 4: Add user details to Firestore
-      final String collectionName = getFirestoreDocument();
+      // Reference to the user document under the path /{env}/users/users/{userId}
+      final userDocRef = _firestore
+          .collection(env) // Environment collection
+          .doc('users') // 'users' document
+          .collection('users') // 'users' collection under 'users' document
+          .doc(userCredential.user!.uid); // User's document with userId
 
-// Check if the collection name is empty or contains '/'
-      if (collectionName.isEmpty || collectionName.contains('/')) {
-        throw Exception(
-            'Invalid collection name returned by getFirestoreDocument()');
-      }
-
-// Get the users collection
-      final usersCollection = _firestore.collection(collectionName);
-      String passwordEncrypted = await encryptDecryptText(
-          _passwordController.text.trim(), EncryptionMode.encrypt);
-// Create or update user document
-      await usersCollection
-          .doc('users')
-          .collection(userCredential.user!.uid)
-          .doc('user')
-          .set({
+      // Set the user data directly in the user's document
+      await userDocRef.set({
         'userId': userCredential.user!.uid,
         'email': _emailController.text.trim(),
-        'password': _passwordController.text.trim(),
         'username': _usernameController.text.trim(),
         'fullName': _fullNameController.text.trim(),
         'profilePictureUrl': profilePictureUrl ?? 'NO IMAGE',
@@ -241,23 +291,23 @@ class _SignUpPageState extends State<SignUpPage> {
         'phoneNumber': _phoneNumberController.text.trim(),
         'address': _addressController.text.trim(),
         'role': _roleController.text.trim(),
-        'creationDate': FieldValue
-            .serverTimestamp(), // Use server timestamp instead of Timestamp.now()
+        'creationDate': FieldValue.serverTimestamp(),
       });
 
-      // Step 5: Create User object
+      // Save userId locally if needed
       saveSP('userId', userCredential.user!.uid);
 
-      // Step 6: Navigate to the home page
+      // Navigate to the SignInPage or any other page
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const MapPage()),
+        MaterialPageRoute(builder: (context) => const SignInPage()),
       );
     } catch (e) {
-      // Delete the user account if an error occurs
+      // If user creation failed, delete the user from Firebase Auth
       if (userCredential != null) {
         await userCredential.user?.delete();
-      } // Show an error message if sign-up fails
+      }
+      // Show an error dialog
       showDialog(
         context: context,
         builder: (context) {
@@ -279,57 +329,46 @@ class _SignUpPageState extends State<SignUpPage> {
       });
     }
   }
-}
 
-void showMessageDialog(BuildContext context, String title, String message) {
-  showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      );
-    },
-  );
-}
+  bool _validateForm(
+      TextEditingController emailController,
+      TextEditingController passwordController,
+      TextEditingController usernameController,
+      TextEditingController fullNameController,
+      BuildContext context,
+      ) {
+    if (emailController.text.isEmpty ||
+        passwordController.text.isEmpty ||
+        usernameController.text.isEmpty ||
+        fullNameController.text.isEmpty) {
+      showMessageDialog(
+          context, 'Validation Error', 'Please fill in all required fields.');
+      return false;
+    }
 
-// Method to validate the form fields
-// Method to validate the form fields
-bool _validateForm(
-    TextEditingController emailController,
-    TextEditingController passwordController,
-    TextEditingController usernameController,
-    TextEditingController fullNameController,
-    BuildContext context) {
-  if (emailController.text.isEmpty ||
-      passwordController.text.isEmpty ||
-      usernameController.text.isEmpty ||
-      fullNameController.text.isEmpty) {
-    return false;
+    if (!isValidEmail(emailController.text)) {
+      showMessageDialog(
+          context, 'Validation Error', 'Please enter a valid email address.');
+      return false;
+    }
+
+    if (passwordController.text.length < 6) {
+      showMessageDialog(context, 'Validation Error',
+          'Password must be at least 6 characters long.');
+      return false;
+    }
+
+    return true;
   }
 
-  if (!isValidEmail(emailController.text)) {
-    // Show error message if email is not valid
-    showMessageDialog(
-        context, 'Validation Error', 'Please enter a valid email address');
-
-    return false;
-  }
-
-  if (passwordController.text.length < 6) {
-    // Show error message if password is too short
+  void showMessageDialog(BuildContext context, String title, String message) {
     showDialog(
       context: context,
       builder: (context) {
+        final theme = Theme.of(context);
         return AlertDialog(
-          title: const Text('Validation Error'),
-          content: const Text('Password must be at least 6 characters long.'),
+          title: Text(title, style: theme.textTheme.headlineMedium),
+          content: Text(message, style: theme.textTheme.bodyMedium),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -339,9 +378,5 @@ bool _validateForm(
         );
       },
     );
-    return false;
   }
-
-  // All validations passed
-  return true;
 }

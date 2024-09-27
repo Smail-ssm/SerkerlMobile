@@ -15,6 +15,7 @@ class Client {
   String role; // Role of the user (e.g., admin, user)
   String password; // Password for the user account
   String fcmToken; // Password for the user account
+  double balance; // Password for the user account
   DateTime creationDate; // Account creation date
 
   Client({
@@ -29,6 +30,7 @@ class Client {
     required this.role,
     required this.password,
     required this.fcmToken,
+    required this.balance,
     required this.creationDate,
   });
 
@@ -45,8 +47,9 @@ class Client {
       address: data['address'] as String,
       role: data['role'] as String,
       creationDate: (data['creationDate'] as Timestamp).toDate(),
-      password: data['password'] as String,
+      password: data['password'] as String? ?? '',
       fcmToken: data['fcmToken'] as String? ?? '',
+      balance: data['balance'] as double? ?? 0,
     );
   }
 
@@ -64,6 +67,7 @@ class Client {
       role: json['role'],
       password: json['password'],
       fcmToken: json['fcmToken'],
+      balance: json['balance'],
       creationDate: DateTime.parse(json['creationDate']),
     );
   }
@@ -82,6 +86,7 @@ class Client {
       'role': role,
       'password': password,
       'fcmToken': fcmToken,
+      'balance': balance,
       'creationDate': creationDate.toIso8601String(),
     };
   }

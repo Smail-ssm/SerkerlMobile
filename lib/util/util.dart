@@ -150,7 +150,7 @@ Future<Client?> fetchClientData(String userId) async {
   try {
     // Retrieve user document from Firestore using the user ID
     DocumentSnapshot userDoc =
-        await usersCollection.doc('users').collection(userId).doc('user').get();
+        await usersCollection.doc('users').collection('users').doc(userId).get();
 
     // Check if the user document exists
     if (userDoc.exists) {

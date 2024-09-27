@@ -9,7 +9,6 @@ import 'package:ebike/pages/Settings.dart';
 import 'package:ebike/pages/signin_page.dart';
 import 'package:ebike/services/Vehicleservice.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart' as html;
 import 'package:fluttertoast/fluttertoast.dart';
@@ -33,8 +32,10 @@ import '../widgets/bottomWidget.dart';
 import '../widgets/infoBUtton.dart';
 import '../widgets/menuButton.dart';
 import '../widgets/share_bottom_sheet.dart';
+import 'BalancePage.dart';
 import 'ClientProfilePage.dart';
 import 'History.dart';
+import 'SupportPage.dart';
 
 class MapPage extends StatefulWidget {
   final Client? client;
@@ -55,12 +56,13 @@ class _MapPageState extends State<MapPage> {
   final Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
   final List<MarkerId> _destinationMarkerIds = [];
-  final MapService _mapService = MapService(ParkingService(), Vehicleservice()); // Initialize the service
+  final MapService _mapService =
+      MapService(ParkingService(), Vehicleservice()); // Initialize the service
 
   Client? client; // User data
   GoogleMapController? _mapController;
   final scaffoldKey = GlobalKey<ScaffoldState>();
-  late LatLng currentLocation; // Store current location
+  LatLng? currentLocation; // Store current location
   bool isLoading = true; // Track loading state
   Set<Polygon> polygons = {}; // Set to store polygons
   final AreaService _areaService = AreaService();
@@ -77,7 +79,7 @@ class _MapPageState extends State<MapPage> {
     _initializeLocation();
     _fetchAreas(); // Fetch areas when the widget initializes
     _fetchVehiculs(); // Fetch areas when the widget initializes
-  //  _fetchAndRenderParkings(); // Fetch and render parking on map initialization
+    //  _fetchAndRenderParkings(); // Fetch and render parking on map initialization
 
     client = widget.client;
     requestPermissions(context); // Request location permissions
@@ -91,6 +93,7 @@ class _MapPageState extends State<MapPage> {
     _filterController.close();
     super.dispose();
   }
+
   Future<void> _fetchMarkers() async {
     setState(() {
       isLoading = true;
@@ -116,22 +119,17 @@ class _MapPageState extends State<MapPage> {
         isLoading = false;
       });
       Fluttertoast.showToast(
-          msg:  'Error fetching markers: $e',
+          msg: 'Error fetching markers: $e',
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.BOTTOM,
           timeInSecForIosWeb: 1,
           backgroundColor: Colors.black,
           textColor: Colors.white,
-          fontSize: 16.0
-      );
+          fontSize: 16.0);
     }
   }
+
   Future<void> _initializeLocation() async {
-    // SharedPreferences prefs = await SharedPreferences.getInstance();
-    // double? storedLatitude = prefs.getDouble('latitude');
-    // double? storedLongitude = prefs.getDouble('longitude');
-    // currentLocation= LatLng(storedLatitude!, storedLongitude!);
-    // if( currentLocation ==null){
     setState(() {
       isLoadingLocation = true; // Start showing loading spinner
     });
@@ -143,103 +141,25 @@ class _MapPageState extends State<MapPage> {
       });
       _moveCameraToCurrentLocation();
     } catch (e) {
-          Fluttertoast.showToast(
-            msg:  'Error fetching location: $e',
-            toastLength: Toast.LENGTH_SHORT,
-            gravity: ToastGravity.BOTTOM,
-            timeInSecForIosWeb: 1,
-            backgroundColor: Colors.black,
-            textColor: Colors.white,
-            fontSize: 16.0
-        );
+      Fluttertoast.showToast(
+        msg: 'Error fetching location: $e',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.black,
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
       setState(() {
         isLoadingLocation = false; // Stop loading even if location fetch failed
+        // Optionally, set a default location or handle accordingly
       });
     }
   }
 
-  // }
-  // Fetch the parking list and render them as markers
-  // Future<void> _fetchAndRenderParkings() async {
-  //   setState(() {
-  //     isLoading = true; // Show loading indicator
-  //   });
-  //
-  //   // Create custom icon for parking
-  //   final parkingIcon = await createCustomIcon(
-  //       Icons.local_parking, Colors.red); // Customize parking icon
-  //
-  //   try {
-  //     // Fetch the list of parkings from the service
-  //     List<Parking> parkings = await ParkingService().fetchParkings();
-  //     if (kDebugMode) {
-  //       print(
-  //         'Fetched parkings: ${parkings.length}');
-  //     } // Debugging to see if data is being fetched
-  //
-  //     // Prepare new markers and marker info map
-  //     final newMarkers = <Marker>{};
-  //     final newMarkerInfo = <MarkerId, MarkerInfo>{};
-  //
-  //     for (var parking in parkings) {
-  //       print(
-  //           'Parking: ${parking.name}, Coordinates: ${parking.coordinates.latitude}, ${parking.coordinates.longitude}'); // Check coordinates
-  //       if (parking.coordinates.latitude == 0.0 ||
-  //           parking.coordinates.longitude == 0.0) {
-  //         continue; // Skip invalid data
-  //       }
-  //
-  //       // Create marker for the parking
-  //       final markerId = MarkerId(parking.id);
-  //       final marker = Marker(
-  //         markerId: markerId,
-  //         icon: parkingIcon,
-  //         position: LatLng(
-  //             parking.coordinates.latitude, parking.coordinates.longitude),
-  //         onTap: () => _onMarkerTapped(newMarkerInfo[markerId]!),
-  //         infoWindow: InfoWindow(
-  //           title: parking.name,
-  //           snippet:
-  //               'Capacity: ${parking.currentCapacity}/${parking.maxCapacity}',
-  //         ),
-  //       );
-  //
-  //       // Add the marker to the set and marker info map
-  //       newMarkers.add(marker);
-  //       newMarkerInfo[markerId] = MarkerInfo(
-  //         id: parking.id,
-  //         model: parking.name,
-  //         isAvailable: parking.isOpen,
-  //         isParking: true,
-  //         // Indicate that this is a parking marker
-  //         parking: parking,
-  //         vehicle: null,
-  //         // No vehicle associated with parking
-  //         isDestination: false,
-  //       );
-  //     }
-  //
-  //     // Update the map markers and marker info map
-  //     setState(() {
-  //       _markers.addAll(newMarkers); // Add new parking markers
-  //       _markerInfoMap.addAll(newMarkerInfo); // Add new parking marker info
-  //       isLoading = false; // Hide loading indicator
-  //     });
-  //   } catch (e) {
-  //     if (kDebugMode) {
-  //       print('Error fetching parkings: $e');
-  //     }
-  //     setState(() {
-  //       isLoading = false; // Hide loading indicator on error
-  //     });
-  //   }
-  // }
-
   void _moveCameraToCurrentLocation() {
-    if (_mapController != null) {
+    if (_mapController != null && currentLocation != null) {
       _mapController!.animateCamera(
-        CameraUpdate.newLatLngZoom(
-            currentLocation, 15.0), // Set zoom level to 15.0
+        CameraUpdate.newLatLngZoom(currentLocation!, 15.0),
       );
     }
   }
@@ -249,93 +169,16 @@ class _MapPageState extends State<MapPage> {
       List<Area> areas = await _areaService.fetchAreas();
       setState(() {
         polygons = areas.map((area) => area.polygon).toSet();
-       });
+      });
     } catch (e) {
-       Fluttertoast.showToast(
-          msg:  'Error fetching areas: $e',
+      Fluttertoast.showToast(
+          msg: 'Error fetching areas: $e',
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.BOTTOM,
           timeInSecForIosWeb: 1,
           backgroundColor: Colors.black,
           textColor: Colors.white,
-          fontSize: 16.0
-      );  }
-  }
-  Future<void> _fetchAndRenderParkings() async {
-    setState(() {
-      isLoading = true; // Show loading indicator
-    });
-
-    try {
-      // Fetch parkings from the service
-     List<Parking> parkings = await _parkingService.fetchParkings();
-
-      // Load custom parking icon from the Material icon
-      final parkingIcon = await createCustomIcon(Icons.local_parking, Colors.green);
-
-      // Prepare new markers and marker info map
-      final newMarkers = <Marker>{};
-      final newMarkerInfo = <MarkerId, MarkerInfo>{};
-
-      for (var parking in parkings) {
-
-        // Check if parking has valid coordinates
-        if (parking.coordinates.latitude == 0.0 || parking.coordinates.longitude == 0.0) {
-          continue; // Skip invalid data
-        }
-
-        final markerId = MarkerId(parking.id);
-
-        // Use the getMarkerIcon function to get the parking icon (since vehicle is null)
-        final markerIcon = getMarkerIcon(
-          null, // No vehicle, so we pass null
-          BitmapDescriptor.defaultMarker, // Placeholder for scooters
-          BitmapDescriptor.defaultMarker, // Placeholder for ebikes
-          parkingIcon, // Pass the parking icon
-        );
-
-        // Create marker for the parking
-        final marker = Marker(
-          markerId: markerId,
-          icon: markerIcon,
-          position: LatLng(parking.coordinates.latitude, parking.coordinates.longitude),
-          onTap: () => _onMarkerTap( markerId ),
-          infoWindow: InfoWindow(
-            title: parking.name,
-            snippet: 'Capacity: ${parking.currentCapacity}/${parking.maxCapacity}',
-          ),
-        );
-
-        newMarkers.add(marker);
-        newMarkerInfo[markerId] = MarkerInfo(
-          id: parking.id,
-          model: parking.name,
-          isAvailable: parking.isOpen,
-          isParking: true,
-          parking: parking,
-          vehicle: null, // No vehicle, only parking
-          isDestination: false,
-        );
-      }
-
-      setState(() {
-         _markers.addAll(newMarkers); // Add new parking markers
-         _markerInfoMap.addAll(newMarkerInfo); // Add new parking marker info
-        isLoading = false; // Hide loading indicator
-      });
-
-    } catch (e) {
-       Fluttertoast.showToast(
-          msg:  'Error fetching parking: $e',
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.black,
-          textColor: Colors.white,
-          fontSize: 16.0
-      );      setState(() {
-        isLoading = false; // Hide loading indicator on error
-      });
+          fontSize: 16.0);
     }
   }
 
@@ -344,7 +187,8 @@ class _MapPageState extends State<MapPage> {
       isLoading = true; // Show loading indicator
     });
 
-    final scooterIcon = await createCustomIcon(Icons.electric_scooter, Colors.blue);
+    final scooterIcon =
+        await createCustomIcon(Icons.electric_scooter, Colors.blue);
     final ebikeIcon = await createCustomIcon(Icons.pedal_bike, Colors.green);
     final parkingIcon = await createCustomIcon(Icons.local_parking, Colors.red);
 
@@ -362,7 +206,8 @@ class _MapPageState extends State<MapPage> {
       final newMarkers = <Marker>{};
       final newMarkerInfo = <MarkerId, MarkerInfo>{};
       for (var parking in parkings) {
-        if (parking.coordinates.latitude == 0.0 || parking.coordinates.longitude == 0.0) {
+        if (parking.coordinates.latitude == 0.0 ||
+            parking.coordinates.longitude == 0.0) {
           continue; // Skip invalid data
         }
 
@@ -372,14 +217,17 @@ class _MapPageState extends State<MapPage> {
           BitmapDescriptor.defaultMarker, // Placeholder for scooters
           BitmapDescriptor.defaultMarker, // Placeholder for ebikes
           parkingIcon, // Pass the parking icon
-        ); final marker = Marker(
+        );
+        final marker = Marker(
           markerId: markerId,
           icon: markerIcon,
-          position: LatLng(parking.coordinates.latitude, parking.coordinates.longitude),
-          onTap: () => _onMarkerTap( markerId ),
+          position: LatLng(
+              parking.coordinates.latitude, parking.coordinates.longitude),
+          onTap: () => _onMarkerTap(markerId),
           infoWindow: InfoWindow(
             title: parking.name,
-            snippet: 'Capacity: ${parking.currentCapacity}/${parking.maxCapacity}',
+            snippet:
+                'Capacity: ${parking.currentCapacity}/${parking.maxCapacity}',
           ),
         );
         newMarkers.add(marker);
@@ -389,23 +237,25 @@ class _MapPageState extends State<MapPage> {
           isAvailable: parking.isOpen,
           isParking: true,
           parking: parking,
-          vehicle: null, // No vehicle, only parking
+          vehicle: null,
+          // No vehicle, only parking
           isDestination: false,
-        );}
+        );
+      }
       for (var vehicle in filteredVehicles) {
         if (vehicle.latitude == null || vehicle.longitude == null) {
           continue; // Skip invalid data
         }
 
-        final markerIcon =
-            getMarkerIcon(vehicle, scooterIcon, ebikeIcon,BitmapDescriptor.defaultMarker);
+        final markerIcon = getMarkerIcon(
+            vehicle, scooterIcon, ebikeIcon, BitmapDescriptor.defaultMarker);
         final markerId = MarkerId(vehicle.id);
 
         final marker = Marker(
           markerId: markerId,
           icon: markerIcon,
           position: LatLng(vehicle.latitude!, vehicle.longitude!),
-          onTap: () => _onMarkerTap( markerId ),
+          onTap: () => _onMarkerTap(markerId),
           infoWindow: InfoWindow(
             title: vehicle.model,
             snippet: vehicle.isAvailable ? 'Available' : 'Not Available',
@@ -429,16 +279,14 @@ class _MapPageState extends State<MapPage> {
         isLoading = false; // Hide loading indicator
       });
     } catch (e) {
-
       Fluttertoast.showToast(
-          msg:  'Error fetching vehicles: $e',
+          msg: 'Error fetching vehicles: $e',
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.BOTTOM,
           timeInSecForIosWeb: 1,
           backgroundColor: Colors.black,
           textColor: Colors.white,
-          fontSize: 16.0
-      );
+          fontSize: 16.0);
       setState(() {
         isLoading = false; // Hide loading indicator on error
       });
@@ -495,13 +343,16 @@ class _MapPageState extends State<MapPage> {
       endDrawer: _buildRightDrawer(),
       body: Stack(
         children: [
-          currentLocation != null ? _buildGoogleMap() : Container(),
+          if (currentLocation != null)
+            _buildGoogleMap()
+          else
+            const Center(child: CircularProgressIndicator()),
           menuButton(scaffoldKey: scaffoldKey),
           InfoButton(scaffoldKey: scaffoldKey),
-          _buildCurrentLocationButton(),
-          _buildMapGuidButton(),
-          _buildScanCodeButton(),
-          _buildMapStyleButton(),
+          if (currentLocation != null) _buildCurrentLocationButton(),
+          if (currentLocation != null) _buildMapGuidButton(),
+          if (currentLocation != null) _buildScanCodeButton(),
+          if (currentLocation != null) _buildMapStyleButton(),
           if (isLoadingLocation)
             const Center(
               child: CircularProgressIndicator(),
@@ -512,14 +363,16 @@ class _MapPageState extends State<MapPage> {
   }
 
   Widget _buildGoogleMap() {
+    if (currentLocation == null) {
+      return Container(); // Or any placeholder widget
+    }
     return GoogleMap(
       mapType: _currentMapType,
       initialCameraPosition: CameraPosition(
-        target: currentLocation ?? const LatLng(0, 0),
-        // Fallback to (0,0) if location is not available
+        target: currentLocation!,
         zoom: 15.0,
       ),
-      onMapCreated: (controller) {
+      onMapCreated: (GoogleMapController controller) {
         _mapController = controller;
       },
       polygons: polygons,
@@ -583,7 +436,7 @@ class _MapPageState extends State<MapPage> {
       _destination = position;
     });
 
-    _drawRoute(currentLocation, position, markerId);
+    _drawRoute(currentLocation!, position, markerId);
   }
 
   void _removeMarker(String markerId) {
@@ -625,16 +478,17 @@ class _MapPageState extends State<MapPage> {
           markerInfo: markerInfo, // Pass vehicle marker information
           currentLocation: currentLocation, // Pass current location
           drawRoute: (LatLng origin, LatLng destination, MarkerId markerId) {
-            _drawRoute(origin, destination, markerId); // Implement route drawing
+            _drawRoute(
+                origin, destination, markerId); // Implement route drawing
           },
         ),
       );
     }
   }
 
-
   void _showParkingDetails(Parking parking) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark; // Check if dark mode is active
+    final isDarkMode = Theme.of(context).brightness ==
+        Brightness.dark; // Check if dark mode is active
 
     showModalBottomSheet(
       context: context,
@@ -642,7 +496,8 @@ class _MapPageState extends State<MapPage> {
         return Padding(
           padding: EdgeInsets.all(16.0),
           child: Container(
-            color: isDarkMode ? Colors.black : Colors.white, // Set background color based on theme
+            color: isDarkMode ? Colors.black : Colors.white,
+            // Set background color based on theme
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -663,7 +518,9 @@ class _MapPageState extends State<MapPage> {
                   alignment: Alignment.bottomRight,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isDarkMode ? Colors.grey[700] : Colors.blue, // Adjust button color
+                      backgroundColor: isDarkMode
+                          ? Colors.grey[700]
+                          : Colors.blue, // Adjust button color
                     ),
                     onPressed: () {
                       Navigator.of(context).pop();
@@ -679,7 +536,6 @@ class _MapPageState extends State<MapPage> {
     );
   }
 
-
   void _showDestinationDetails(MarkerInfo markerInfo) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
@@ -692,7 +548,8 @@ class _MapPageState extends State<MapPage> {
             bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
           child: Container(
-            color: isDarkMode ? Colors.black : Colors.white, // Adjust background color
+            color: isDarkMode ? Colors.black : Colors.white,
+            // Adjust background color
             padding: const EdgeInsets.all(16.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -704,7 +561,8 @@ class _MapPageState extends State<MapPage> {
                   child: ElevatedButton.icon(
                     onPressed: () {
                       Navigator.of(context).pop(); // Close bottom sheet
-                      _removeMarker(markerInfo.id); // Remove the marker from the map
+                      _removeMarker(
+                          markerInfo.id); // Remove the marker from the map
                     },
                     icon: const Icon(Icons.delete),
                     label: const Text('Remove Marker'),
@@ -752,7 +610,9 @@ class _MapPageState extends State<MapPage> {
                   alignment: Alignment.bottomRight,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isDarkMode ? Colors.grey[700] : Colors.blue, // Adjust button color
+                      backgroundColor: isDarkMode
+                          ? Colors.grey[700]
+                          : Colors.blue, // Adjust button color
                     ),
                     onPressed: () {
                       Navigator.of(context).pop();
@@ -768,7 +628,6 @@ class _MapPageState extends State<MapPage> {
     );
   }
 
-
   final bool _showMapGuide = false;
 
   Widget _buildRefreshButton() {
@@ -782,8 +641,8 @@ class _MapPageState extends State<MapPage> {
             _initializeLocation();
             _fetchAreas(); // Fetch areas when the widget initializes
             _fetchVehiculs(); // Fetch areas when the widget initializes
-          //  _fetchAndRenderParkings(); // Fetch and render parking on map initialization
-           },
+            //  _fetchAndRenderParkings(); // Fetch and render parking on map initialization
+          },
           backgroundColor: buttonColor,
           // Adaptable to light and dark mode
           icon: Icon(
@@ -932,35 +791,136 @@ class _MapPageState extends State<MapPage> {
 
   Widget _buildCurrentLocationButton() {
     return Positioned(
-      bottom: 60,
-      right: 20,
-      child: Builder(
-        builder: (BuildContext context) {
-          final buttonColor = Theme.of(context).colorScheme.primary;
-          final iconColor = Theme.of(context).colorScheme.onPrimary;
-
-          return Tooltip(
-            message: 'Current Location', // Tooltip message
-            child: RawMaterialButton(
-              onPressed: _initializeLocation,
-              fillColor: buttonColor,
-              // Adaptable to light and dark mode
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.0), // Rounded corners
-              ),
-              constraints: const BoxConstraints.tightFor(
-                width: 40.0, // Square button width
-                height: 40.0, // Square button height
-              ),
-              child: Icon(
-                Icons.my_location, size: 24.0, // Icon size
-                color: iconColor, // Icon color adaptable to button background
-              ),
-            ),
-          );
-        },
+      bottom: 80, // Adjusted above the Scan button
+      right: 20, // Positioned close to the right edge
+      child: Tooltip(
+        message: 'Current Location',
+        child: RawMaterialButton(
+          onPressed: _initializeLocation,
+          fillColor: Theme.of(context).colorScheme.primary,
+          // Use theme-based color
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8.0),
+          ),
+          constraints: const BoxConstraints.tightFor(
+            width: 40.0,
+            height: 40.0,
+          ),
+          child: Icon(
+            Icons.my_location,
+            size: 24.0,
+            color: Theme.of(context).colorScheme.onPrimary,
+          ),
+        ),
       ),
     );
+  }
+
+  Widget _buildMapGuidButton() {
+    return Positioned(
+      bottom: 140, // Positioned above the Current Location button
+      right: 20,
+      child: Tooltip(
+        message: _showMapGuide ? 'Close Map Guide' : 'Open Map Guide',
+        child: RawMaterialButton(
+          onPressed: () {
+            _showMapGuideBottomSheet(context);
+          },
+          fillColor: Theme.of(context).colorScheme.primary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8.0),
+          ),
+          constraints: const BoxConstraints.tightFor(
+            width: 40.0,
+            height: 40.0,
+          ),
+          child: Icon(
+            _showMapGuide ? Icons.close : Icons.map,
+            size: 24.0,
+            color: Theme.of(context).colorScheme.onPrimary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScanCodeButton() {
+    final buttonColor = Colors.red; // Set the color to red as in the image
+    final iconColor = Colors.white; // White text color for the Scan button
+
+    return Positioned(
+      bottom: 20,
+      // Position it at the bottom
+      left: 20,
+      // Padding from the left side
+      right: 20,
+      // Padding from the right side, making it span almost the entire width
+      child: Tooltip(
+        message: 'Scan QR Code', // Tooltip message
+        child: RawMaterialButton(
+          onPressed: () {
+            showModalBottomSheet(
+              context: context,
+              builder: (BuildContext context) {
+                return const CodeInputBottomSheet(); // Custom bottom sheet widget
+              },
+            );
+          },
+          fillColor: buttonColor,
+          // Set the button background color to red
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(
+                30.0), // Rounded corners for a smoother look
+          ),
+          constraints: const BoxConstraints.tightFor(
+            width: double.infinity, // Full width button
+            height: 60.0, // Larger height for better accessibility
+          ),
+          child: Text(
+            'Scan', // Display "Scan" on the button
+            style: TextStyle(
+              fontSize: 18.0, // Increase text size for better readability
+              color: iconColor, // Set the text color to white for contrast
+              fontWeight: FontWeight.bold, // Make the text bold
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMapStyleButton() {
+    return Positioned(
+      bottom: 120, // Positioned above the Scan button on the left
+      left: 20, // Aligned to the left side
+      child: Tooltip(
+        message: 'Change Map Style', // Tooltip message
+        child: RawMaterialButton(
+          onPressed: _showMapTypeDialog,
+          fillColor: Theme.of(context).colorScheme.primary,
+          // Use theme-based color
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8.0), // Rounded corners
+          ),
+          constraints: const BoxConstraints.tightFor(
+            width: 40.0,
+            height: 40.0,
+          ),
+          child: Icon(
+            Icons.layers_outlined,
+            size: 24.0,
+            color: Theme.of(context).colorScheme.onPrimary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _changeMapType(MapType mapType) {
+    setState(() {
+      _currentMapType = mapType;
+    });
+    Navigator.of(context).pop(); // Close the dialog
   }
 
   void _showMapGuideBottomSheet(BuildContext context) {
@@ -1060,43 +1020,6 @@ class _MapPageState extends State<MapPage> {
     );
   }
 
-  Widget _buildMapGuidButton() {
-    return Positioned(
-      bottom: 120,
-      right: 20,
-      child: Builder(
-        builder: (BuildContext context) {
-          final buttonColor = Theme.of(context).colorScheme.primary;
-          final iconColor = Theme.of(context).colorScheme.onPrimary;
-
-          return Tooltip(
-            message: _showMapGuide ? 'Close Map Guide' : 'Open Map Guide',
-            // Tooltip message
-            child: RawMaterialButton(
-              onPressed: () {
-                _showMapGuideBottomSheet(context);
-              },
-              fillColor: buttonColor,
-              // Background color of the button
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.0), // Rounded corners
-              ),
-              constraints: const BoxConstraints.tightFor(
-                width: 40.0, // Square button width
-                height: 40.0, // Square button height
-              ),
-              child: Icon(
-                _showMapGuide ? Icons.close : Icons.map,
-                size: 24.0, // Icon size
-                color: iconColor, // Icon color
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   Drawer _buildLeftDrawer() {
     return Drawer(
       child: ListView(
@@ -1108,7 +1031,11 @@ class _MapPageState extends State<MapPage> {
             'Balance',
             Icons.account_balance,
             () {
-              showSnackBar(context, 'Balance');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => BalancePage(client: widget.client)),
+              );
             },
             value: "0",
           ),
@@ -1149,14 +1076,11 @@ class _MapPageState extends State<MapPage> {
             'Support',
             Icons.support,
             () {
-              showSnackBar(context, 'Support');
-            },
-          ),
-          buildListTile(
-            'language'.tr(),
-            Icons.language,
-            () {
-              showSnackBar(context, 'Language');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => SupportPage(client: widget.client)),
+              );
             },
           ),
           buildListTile(
@@ -1190,42 +1114,6 @@ class _MapPageState extends State<MapPage> {
             },
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildScanCodeButton() {
-    final buttonColor = Theme.of(context).colorScheme.primary;
-    final iconColor = Theme.of(context).colorScheme.onPrimary;
-
-    return Positioned(
-      bottom: 60,
-      left: 20,
-      child: Tooltip(
-        message: 'Scan QR Code', // Tooltip message
-        child: RawMaterialButton(
-          onPressed: () {
-            showModalBottomSheet(
-              context: context,
-              builder: (BuildContext context) {
-                return const CodeInputBottomSheet(); // Your custom bottom sheet widget
-              },
-            );
-          },
-          fillColor: buttonColor,
-          // Adapt button color based on theme
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8.0), // Rounded corners
-          ),
-          constraints: const BoxConstraints.tightFor(
-            width: 40.0, // Button width
-            height: 40.0, // Button height
-          ),
-          child: Icon(
-            Icons.qr_code, size: 20.0, // Icon size
-            color: iconColor, // Adapt icon color based on theme
-          ),
-        ),
       ),
     );
   }
@@ -1597,44 +1485,6 @@ class _MapPageState extends State<MapPage> {
     ];
   }
 
-  void _changeMapType(MapType mapType) {
-    setState(() {
-      _currentMapType = mapType;
-    });
-    Navigator.of(context).pop(); // Close the dialog
-  }
-
-  Widget _buildMapStyleButton() {
-    final buttonColor = Theme.of(context).colorScheme.primary;
-    final iconColor = Theme.of(context).colorScheme.onPrimary;
-
-    return Positioned(
-      bottom: 120,
-      left: 20,
-      child: Tooltip(
-        message: 'Change Map Style', // Tooltip message
-        child: RawMaterialButton(
-          onPressed: () {
-            _showMapTypeDialog();
-          },
-          fillColor: buttonColor,
-          // Adapt button color based on theme
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8.0), // Rounded corners
-          ),
-          constraints: const BoxConstraints.tightFor(
-            width: 40.0, // Button width
-            height: 40.0, // Button height
-          ),
-          child: Icon(
-            Icons.style_outlined, size: 20.0, // Icon size
-            color: iconColor, // Adapt icon color based on theme
-          ),
-        ),
-      ),
-    );
-  }
-
   Future<void> _drawRoute(
       LatLng origin, LatLng destination, MarkerId markerId) async {
     final String language = context.locale.languageCode;
@@ -1686,26 +1536,26 @@ class _MapPageState extends State<MapPage> {
             }
           });
         } else {
-           Fluttertoast.showToast(
-              msg:  'No routes found',
+          Fluttertoast.showToast(
+              msg: 'No routes found',
               toastLength: Toast.LENGTH_SHORT,
               gravity: ToastGravity.BOTTOM,
               timeInSecForIosWeb: 1,
               backgroundColor: Colors.black,
               textColor: Colors.white,
-              fontSize: 16.0
-          );  }
+              fontSize: 16.0);
+        }
       } else {
-
         Fluttertoast.showToast(
-            msg:  'Failed to fetch directions. Status Code: ${response.statusCode}',
+            msg:
+                'Failed to fetch directions. Status Code: ${response.statusCode}',
             toastLength: Toast.LENGTH_SHORT,
             gravity: ToastGravity.BOTTOM,
             timeInSecForIosWeb: 1,
             backgroundColor: Colors.black,
             textColor: Colors.white,
-            fontSize: 16.0
-        );  }
+            fontSize: 16.0);
+      }
     } catch (e) {
       print('Error fetching directions: $e');
     }
