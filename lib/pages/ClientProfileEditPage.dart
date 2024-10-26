@@ -188,6 +188,7 @@ class _UserProfileEditPageState extends State<UserProfileEditPage> {
       profilePictureUrl: profilePictureUrl,
       // Use the new or existing URL
       creationDate: widget.client!.creationDate,
+      referralCode: widget.client!.referralCode,
       password: '',
       balance: widget.client!.balance,
       fcmToken: await  getSP("fcmToken"),
@@ -205,23 +206,32 @@ class _UserProfileEditPageState extends State<UserProfileEditPage> {
 
   Future<void> _updateUserInFirestore(Client updatedUser) async {
     final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-    final usersCollection = _firestore.collection(getFirestoreDocument());
+    final String env = getFirestoreDocument(); // Get environment (e.g., 'preprod')
+
+    final userDocRef = _firestore
+        .collection(env)
+        .doc('users')  // This refers to the 'users' collection
+        .collection('users')  // This is where individual users' documents are stored
+        .doc(updatedUser.userId);  // Referencing the specific user by their ID
+
+    // Prepare the updated data
     Map<String, dynamic> updatedUserData = {
       'email': updatedUser.email,
       'username': _usernameController.text.trim(),
       'fullName': _fullNameController.text.trim(),
       'phoneNumber': _phoneNumberController.text.trim(),
       'address': _addressController.text.trim(),
-      'profilePictureUrl': updatedUser.profilePictureUrl,
+      'profilePictureUrl': updatedUser.profilePictureUrl ?? 'NO IMAGE',
     };
 
-    await usersCollection
-        .doc('users')
-        .collection(updatedUser.userId)
-        .doc('user')
-        .update(updatedUserData);
-  }
+    // Update the user's document in Firestore
+    await userDocRef.update(updatedUserData);
 
+    // Optionally, handle any success or error feedback for the update operation
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('User updated successfully')),
+    );
+  }
   Future<void> _pickImage() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {

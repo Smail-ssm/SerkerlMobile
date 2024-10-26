@@ -1,19 +1,80 @@
-// lib/share_bottom_sheet.dart
+import 'package:clipboard/clipboard.dart';
 import 'package:flutter/material.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:share_plus/share_plus.dart';
 import '../util/theme.dart';
+import '../util/util.dart';
 
 class ShareBottomSheet extends StatefulWidget {
-  final String promoCode;
+  final String userId;
 
-  const ShareBottomSheet({Key? key, required this.promoCode}) : super(key: key);
+  const ShareBottomSheet({Key? key, required this.userId}) : super(key: key);
 
   @override
   _ShareBottomSheetState createState() => _ShareBottomSheetState();
 }
 
 class _ShareBottomSheetState extends State<ShareBottomSheet> {
-  bool _isExpanded = false; // Track the dropdown state
+  bool _isExpanded = false;
+  String? _referralCode;
+  String _deepLink = ''; // Variable to store the deep link
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReferralCode(widget.userId);
+  }
+
+  Future<void> _loadReferralCode(String userId) async {
+    String? code = await fetchOrGenerateReferralCode(userId);
+    if (code != null) {
+      setState(() {
+        _referralCode = code.trimLeft().trimRight();
+        // Generate the deep link using the referral code and your server's URL
+        _deepLink = 'www.serkellinks.000.pe/index.php?code=$code';
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Referral code could not be generated')),
+      );
+    }
+  }
+
+  Future<String?> fetchOrGenerateReferralCode(String userId) async {
+    FirebaseFirestore _firestore = FirebaseFirestore.instance;
+    final String env = getFirestoreDocument(); // Get environment (e.g., 'preprod')
+    try {
+      DocumentSnapshot userDoc = await _firestore
+          .collection(env)
+          .doc('users')
+          .collection('users')
+          .doc(userId)
+          .get();
+
+      if (userDoc.exists) {
+        String? existingReferralCode = userDoc['referralCode'];
+
+        if (existingReferralCode != null && existingReferralCode.isNotEmpty) {
+          return existingReferralCode;
+        } else {
+          String newReferralCode = userId.substring(0, 6).toUpperCase(); // Example code generation
+          await _firestore
+              .collection(env)
+              .doc('users')
+              .collection('users')
+              .doc(userId)
+              .update({'referralCode': newReferralCode});
+
+          return newReferralCode;
+        }
+      } else {
+        return null;
+      }
+    } catch (e) {
+      print('Error fetching or generating referral code: $e');
+      return null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +139,7 @@ class _ShareBottomSheetState extends State<ShareBottomSheet> {
             Center(
               child: ElevatedButton(
                 onPressed: () {
-                  // Handle 'Get 1x free 20 min ride!' button press
+                  _loadReferralCode(widget.userId);
                 },
                 child: const Text('Get 1x free 20 min ride!'),
               ),
@@ -88,7 +149,7 @@ class _ShareBottomSheetState extends State<ShareBottomSheet> {
               child: GestureDetector(
                 onTap: () {
                   setState(() {
-                    _isExpanded = !_isExpanded; // Toggle dropdown state
+                    _isExpanded = !_isExpanded;
                   });
                 },
                 child: Text(
@@ -113,10 +174,19 @@ class _ShareBottomSheetState extends State<ShareBottomSheet> {
                 padding: const EdgeInsets.all(8),
                 child: ElevatedButton(
                   onPressed: () {
-                    // Placeholder for share functionality
+                    if (_deepLink.isNotEmpty) {
+                      FlutterClipboard.copy(_deepLink).then(
+                              (value) => ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text(
+                                    'Referral link copied to clipboard!')),
+                          ));
+                    }
                   },
                   child: Text(
-                    widget.promoCode,
+                    _referralCode != null
+                        ? '$_referralCode'
+                        : 'Loading...', // Show the referral code or loading text
                   ),
                 ),
               ),
@@ -125,12 +195,14 @@ class _ShareBottomSheetState extends State<ShareBottomSheet> {
             Center(
               child: ElevatedButton(
                 onPressed: () {
-                  // Placeholder for share functionality
+                  if (_deepLink.isNotEmpty) {
+                    Share.share(
+                        'Join this awesome app! Use my referral link: $_deepLink and get 20 minutes of free rides!');
+                  }
                 },
                 child: const Text('Share with friends'),
                 style: ElevatedButton.styleFrom(
-                  minimumSize:
-                      const Size(double.infinity, 48), // Button width to match parent
+                  minimumSize: const Size(double.infinity, 48),
                 ),
               ),
             ),
@@ -184,13 +256,13 @@ class _ShareBottomSheetState extends State<ShareBottomSheet> {
 }
 
 // Method to build the bottom sheet with dropdown
-void showShareBottomSheet(BuildContext context, String promoCode) {
+void showShareBottomSheet(BuildContext context, String userId) {
   showModalBottomSheet(
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
     builder: (BuildContext context) {
-      return ShareBottomSheet(promoCode: promoCode);
+      return ShareBottomSheet(userId: userId);
     },
   );
 }

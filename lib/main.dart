@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:ebike/pages/Map.dart';
 import 'package:ebike/pages/OnboardingPage.dart';
 import 'package:ebike/pages/SplashScreen.dart';
+import 'package:ebike/pages/referral_dialog.dart';
 import 'package:ebike/pages/signin_page.dart';
 import 'package:ebike/util/NotificationService.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -10,6 +11,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:uni_links/uni_links.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
+import 'dart:async'; // For StreamSubscription
 
 import 'util/firebase_options.dart';
 import 'util/theme.dart';
@@ -17,7 +21,7 @@ import 'util/theme.dart';
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 FlutterLocalNotificationsPlugin();
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
 
@@ -29,6 +33,12 @@ void main() async {
     final notificationService = NotificationService();
     await notificationService.initialize();
     await FirebaseMessaging.instance.requestPermission();
+    // Activate Firebase App Check
+    await FirebaseAppCheck.instance.activate(
+      androidProvider: AndroidProvider.playIntegrity, // or AndroidProvider.safetyNet
+      appleProvider: AppleProvider.deviceCheck, // iOS-specific provider
+    );
+    await FirebaseAppCheck.instance.setTokenAutoRefreshEnabled(true);
 
     // Initialize the notification plugin for Android
     const initializationSettingsAndroid =
@@ -95,7 +105,11 @@ void main() async {
 
   runApp(
     EasyLocalization(
-      supportedLocales: [const Locale('en', 'US'), const Locale('fr', 'FR'), const Locale('ar', 'TN')],
+      supportedLocales: [
+        const Locale('en', 'US'),
+        const Locale('fr', 'FR'),
+        const Locale('ar', 'TN')
+      ],
       path: 'assets/translations',
       fallbackLocale: const Locale('en', 'US'),
       child: const MyApp(),
@@ -108,8 +122,70 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({Key? key}) : super(key: key);
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+
+  static _MyAppState? of(BuildContext context) =>
+      context.findAncestorStateOfType<_MyAppState>();
+}
+
+class _MyAppState extends State<MyApp> {
+  StreamSubscription<Uri?>? _sub;
+  ThemeMode _themeMode = ThemeMode.system;
+  void changeTheme(ThemeMode themeMode) {
+    setState(() {
+      _themeMode = themeMode;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initDeepLinkListener();
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
+
+  void _initDeepLinkListener() {
+    // Listen for deep links while the app is running
+    _sub = uriLinkStream.listen((Uri? uri) {
+      if (uri != null) {
+        _handleDeepLink(uri);
+      }
+    }, onError: (Object err) {
+      print('Error listening for deep links: $err');
+    });
+
+    // Handle deep link when app is started via the link
+    getInitialUri().then((Uri? uri) {
+      if (uri != null) {
+        _handleDeepLink(uri);
+      }
+    }).catchError((err) {
+      print('Error retrieving initial link: $err');
+    });
+  }
+
+  void _handleDeepLink(Uri uri) {
+    final referralCode = uri.queryParameters['code'];
+    if (referralCode != null) {
+      // Show the referral dialog with the code
+      showDialog(
+        context: context,
+        barrierDismissible: false, // Prevent dismissing by tapping outside
+        builder: (BuildContext context) {
+          return ReferralDialog(referralCode: referralCode);
+        },
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -118,9 +194,9 @@ class MyApp extends StatelessWidget {
       supportedLocales: context.supportedLocales,
       locale: context.locale,
       title: 'serkel'.tr(),
+      themeMode: _themeMode, // Apply the selected theme mode
       theme: lightTheme,
       darkTheme: darkTheme,
-      themeMode: ThemeMode.system,
       initialRoute: '/',
       routes: {
         '/': (context) => const SplashScreen(),

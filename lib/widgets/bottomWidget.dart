@@ -21,6 +21,9 @@ class VehicleBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Detect if the app is in dark mode
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     LatLng vehicleLocation = LatLng(
       markerInfo.vehicle!.latitude!,
       markerInfo.vehicle!.longitude!,
@@ -40,12 +43,12 @@ class VehicleBottomSheet extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDarkMode ? Colors.grey[900] : Colors.white, // Set color based on theme
         borderRadius: BorderRadius.circular(12.0),
         boxShadow: [
           BoxShadow(
-            color: Colors.black26,
-            offset: Offset(0, 4),
+            color: isDarkMode ? Colors.black45 : Colors.black26,
+            offset: const Offset(0, 4),
             blurRadius: 8.0,
           ),
         ],
@@ -63,9 +66,10 @@ class VehicleBottomSheet extends StatelessWidget {
                 children: [
                   Text(
                     '№ ${markerInfo.vehicle!.model}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
+                      color: isDarkMode ? Colors.white : Colors.black, // Dynamic text color
                     ),
                   ),
                   const SizedBox(height: 8.0),
@@ -76,7 +80,12 @@ class VehicleBottomSheet extends StatelessWidget {
                         color: _getBatteryIconColor(markerInfo.vehicle!.battery.level),
                       ),
                       const SizedBox(width: 4.0),
-                      Text('${calculateRange(markerInfo.vehicle!.battery.level) ?? 'N/A'} km'),
+                      Text(
+                        '${calculateRange(markerInfo.vehicle!.battery.level) ?? 'N/A'} %',
+                        style: TextStyle(
+                          color: isDarkMode ? Colors.white70 : Colors.black87, // Dynamic text color
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -84,7 +93,7 @@ class VehicleBottomSheet extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8.0),
                 decoration: BoxDecoration(
-                  color: Colors.black,
+                  color: isDarkMode ? Colors.grey[850] : Colors.black, // Dynamic color
                   borderRadius: BorderRadius.circular(8.0),
                 ),
                 child: const Icon(
@@ -124,22 +133,36 @@ class VehicleBottomSheet extends StatelessWidget {
           // Pricing Information
           Text(
             'Pricing',
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16.0,
+              color: isDarkMode ? Colors.white70 : Colors.black87, // Dynamic text color
             ),
           ),
           const SizedBox(height: 4.0),
           Text(
-            '10.00₿ + 2.00₿/min',
-            style: const TextStyle(fontSize: 14.0),
+            '1.00 DT + 0.250 DT/min',
+            style: TextStyle(
+              fontSize: 14.0,
+              color: isDarkMode ? Colors.white60 : Colors.black54, // Dynamic text color
+            ),
           ),
           const SizedBox(height: 16.0),
 
           // Additional Details
           const Divider(),
-          Text('Distance: ${_formatDistance(distance)}'),
-          Text('Estimated Time on Foot: ${_formatTime(walkingTime)}'),
+          Text(
+            'Distance: ${_formatDistance(distance)}',
+            style: TextStyle(
+              color: isDarkMode ? Colors.white70 : Colors.black87, // Dynamic text color
+            ),
+          ),
+          Text(
+            'Estimated Time on Foot: ${_formatTime(walkingTime)}',
+            style: TextStyle(
+              color: isDarkMode ? Colors.white70 : Colors.black87, // Dynamic text color
+            ),
+          ),
           const SizedBox(height: 16.0),
 
           // Close Button

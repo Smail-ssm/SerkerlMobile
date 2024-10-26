@@ -46,6 +46,14 @@ dependencies:
   flutter_html: ^3.0.0-beta.2
   fluttertoast: ^8.2.8
   url_launcher: ^6.3.0
+  appcheck: ^1.5.2
+  firebase_app_check: ^0.2.2+7
+  share_plus: ^10.0.0
+  clipboard: ^0.1.3
+  firebase_dynamic_links: ^5.5.7
+  uni_links: ^0.5.1
+  firebase_database: ^10.5.7
+  flutter_speed_dial: ^7.0.0
 google_maps_webservice: ^0.0.20
 
 
@@ -72,6 +80,10 @@ flutter:
     - assets/logo.gif
     - assets/logo.png
     - assets/translations/
+    - assets/mapStyles/aubergine.json
+    - assets/mapStyles/dark.json
+    - assets/mapStyles/night.json
+    - assets/mapStyles/standard.json
     - .env
 flutter_intl:
   enabled: false

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
- import '../model/vehicule.dart';
-import '../util/util.dart';
+import 'package:ebike/model/MaintenanceLog.dart';
+import '../model/vehicule.dart';
+ import '../util/util.dart';
 
 class Vehicleservice {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -25,6 +26,48 @@ class Vehicleservice {
       }).toList();
     } catch (e) {
       print('Error fetching Vehicles: $e');
+      rethrow;
+    }
+  }
+
+
+  // Add a new maintenance log for a vehicle
+  Future<void> addMaintenanceLog(String vehicleId, MaintenanceLog log) async {
+    try {
+      String documentPath = getFirestoreDocument();
+      await _firestore
+          .collection(documentPath)
+          .doc('Vehicles')
+          .collection('Vehicles')
+          .doc(vehicleId)
+          .update({
+        'maintenanceLog': FieldValue.arrayUnion([log.toJson()])
+      });
+
+       print('Maintenance log added successfully for vehicle $vehicleId');
+    } catch (e) {
+      print('Error adding maintenance log for vehicle $vehicleId: $e');
+      rethrow;
+    }
+  }
+
+  // Update an existing maintenance log for a vehicle
+  Future<void> updateMaintenanceLog(
+      String vehicleId, String logId, MaintenanceLog updatedLog) async {
+    try {
+      String documentPath = getFirestoreDocument();
+      final maintenanceLogDoc = _firestore
+          .collection(documentPath)
+          .doc('Vehicles')
+          .collection('Vehicles')
+          .doc(vehicleId)
+          .collection('MaintenanceLogs')
+          .doc(logId);
+
+      await maintenanceLogDoc.update(updatedLog.toJson());
+      print('Maintenance log updated successfully for vehicle $vehicleId');
+    } catch (e) {
+      print('Error updating maintenance log for vehicle $vehicleId: $e');
       rethrow;
     }
   }

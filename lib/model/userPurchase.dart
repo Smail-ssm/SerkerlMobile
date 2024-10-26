@@ -60,4 +60,5 @@ class UserPurchase {
       'rideDistance': rideDistance,
     };
   }
+
 }

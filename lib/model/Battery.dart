@@ -1,10 +1,11 @@
 class Battery {
-  String id; // Example: ID of the battery
-  int vehicleId; // ID of the vehicle associated with this battery
-  String type; // Type of the battery (e.g., Lithium-ion, Lead-acid)
-  double capacity; // Capacity of the battery in Ah or kWh
-  String manufacturer; // Manufacturer of the battery
-  double level; // Manufacturer of the battery
+  String id;
+  int vehicleId;
+  String type;
+  double capacity;
+  String manufacturer;
+  double level;
+  String status; // New field to track battery status (In Use, Charging, Pending Charge, Charged)
 
   Battery({
     required this.id,
@@ -13,17 +14,21 @@ class Battery {
     required this.capacity,
     required this.manufacturer,
     required this.level,
+    required this.status, // New required parameter for status
   });
 
   // Factory constructor for creating a Battery from a JSON object
   factory Battery.fromJson(Map<String, dynamic> json) {
     return Battery(
-      id: json['id'] ?? '',  // Default to an empty string if null
-      vehicleId: json['vehicleId'] ?? '',  // Default to an empty string if null
-      type: json['type'] ?? '',  // Default to an empty string if null
-      capacity: (json['capacity'] != null) ? json['capacity'].toDouble() : 0.0,  // Default to 0.0 if null
-      manufacturer: json['manufacturer'] ?? '',  // Default to an empty string if null
-      level:  (json['level'] != null) ? json['level'].toDouble() : 0.0,  // Default to 0 if null
+      id: json['id'] ?? '',
+      vehicleId: json['vehicleId'] ?? 0,
+      type: json['type'] ?? '',
+      capacity: (json['capacity'] is double)
+          ? json['capacity']
+          : double.tryParse(json['capacity'].toString()) ?? 0.0,      manufacturer: json['manufacturer'] ?? '',
+      level: (json['level'] is double)
+          ? json['level']
+          : double.tryParse(json['level'].toString()) ?? 0.0,      status: json['status'] ?? 'Pending Charge', // Default status
     );
   }
 
@@ -37,6 +42,7 @@ class Battery {
       'capacity': capacity,
       'manufacturer': manufacturer,
       'level': level,
+      'status': status,
     };
   }
 }

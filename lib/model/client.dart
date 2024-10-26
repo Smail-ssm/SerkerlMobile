@@ -15,6 +15,7 @@ class Client {
   String role; // Role of the user (e.g., admin, user)
   String password; // Password for the user account
   String fcmToken; // Password for the user account
+  String referralCode; // Password for the user account
   double balance; // Password for the user account
   DateTime creationDate; // Account creation date
 
@@ -30,6 +31,7 @@ class Client {
     required this.role,
     required this.password,
     required this.fcmToken,
+    required this.referralCode,
     required this.balance,
     required this.creationDate,
   });
@@ -42,14 +44,15 @@ class Client {
       username: data['username'] as String,
       fullName: data['fullName'] as String,
       profilePictureUrl: data['profilePictureUrl'] as String? ?? '', // Allow null profile picture URL
-      dateOfBirth: (data['dateOfBirth'] as Timestamp).toDate(),
+      dateOfBirth: (data['dateOfBirth'] as Timestamp?)?.toDate() ?? DateTime.now(),
       phoneNumber: data['phoneNumber'] as String,
       address: data['address'] as String,
       role: data['role'] as String,
-      creationDate: (data['creationDate'] as Timestamp).toDate(),
+      creationDate: (data['creationDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
       password: data['password'] as String? ?? '',
+      referralCode: data['referralCode'] as String? ?? '',
       fcmToken: data['fcmToken'] as String? ?? '',
-      balance: data['balance'] as double? ?? 0,
+      balance: (data['balance'] != null) ? data['balance'].toDouble() : 0.0,
     );
   }
 
@@ -67,6 +70,7 @@ class Client {
       role: json['role'],
       password: json['password'],
       fcmToken: json['fcmToken'],
+      referralCode: json['referralCode'],
       balance: json['balance'],
       creationDate: DateTime.parse(json['creationDate']),
     );

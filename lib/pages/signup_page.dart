@@ -354,7 +354,7 @@ class _SignUpPageState extends State<SignUpPage> {
           : null,
       'phoneNumber': user.phoneNumber ?? _emailOrPhoneController.text.trim(),
       'address': _addressController.text.trim(),
-      'role': _roleController.text.trim(),
+      'role': 'client',
       'creationDate': FieldValue.serverTimestamp(),
     });
 

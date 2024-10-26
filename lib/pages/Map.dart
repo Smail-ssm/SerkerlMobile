@@ -5,15 +5,19 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:ebike/pages/FeedbackPage.dart';
 import 'package:ebike/pages/NotificationsList.dart';
 import 'package:ebike/pages/Pricing.dart';
+import 'package:ebike/pages/SessionListPage.dart';
 import 'package:ebike/pages/Settings.dart';
 import 'package:ebike/pages/signin_page.dart';
+import 'package:ebike/pages/tech/TechRemoteDiagnosticsPage.dart';
 import 'package:ebike/services/Vehicleservice.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_html/flutter_html.dart' as html;
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -35,6 +39,13 @@ import '../widgets/share_bottom_sheet.dart';
 import 'ClientProfilePage.dart';
 import 'History.dart';
 import 'SupportPage.dart';
+import 'juice/BatteryManagementPage.dart';
+import 'juice/JuicerDashboardPage.dart';
+import 'juice/JuicerEarningsPage.dart';
+import 'juice/JuicerTaskListPage.dart';
+import 'juice/JuicerVehicleListPage.dart';
+import 'tech/TechPerformanceMetricsPage .dart';
+import 'tech/TechWorkOrderManagementPage.dart';
 
 class MapPage extends StatefulWidget {
   final Client? client;
@@ -47,7 +58,7 @@ class MapPage extends StatefulWidget {
   _MapPageState createState() => _MapPageState();
 }
 
-class _MapPageState extends State<MapPage> {
+class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
   bool _isExpanded = true; // Track the expanded state of the tile
   final Map<MarkerId, MarkerInfo> _markerInfoMap = {};
   final _filterController = StreamController<List<String>>.broadcast();
@@ -57,6 +68,9 @@ class _MapPageState extends State<MapPage> {
   final List<MarkerId> _destinationMarkerIds = [];
   final MapService _mapService =
       MapService(ParkingService(), Vehicleservice()); // Initialize the service
+  String? _selectedMapStyle; // Selected map style
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  List<Vehicle> _vehicleList = []; // Add this at the class level
 
   Client? client; // User data
   GoogleMapController? _mapController;
@@ -68,6 +82,9 @@ class _MapPageState extends State<MapPage> {
   final Vehicleservice _vehicleService = Vehicleservice();
   final ParkingService _parkingService = ParkingService();
   bool isLoadingLocation = true;
+  bool isJuicer = false;
+  List<Vehicle> _lowBatteryVehicles = []; // Add this at the class level
+  final bool _showMapGuide = false;
 
   late LatLng _destination; // Track loading state
 
@@ -76,6 +93,9 @@ class _MapPageState extends State<MapPage> {
     super.initState();
 
     _initializeLocation();
+    _loadMapStyle();
+    WidgetsBinding.instance.addObserver(this);
+    showroledialog();
     _fetchAreas(); // Fetch areas when the widget initializes
     _fetchVehiculs(); // Fetch areas when the widget initializes
     //  _fetchAndRenderParkings(); // Fetch and render parking on map initialization
@@ -87,72 +107,129 @@ class _MapPageState extends State<MapPage> {
     });
   }
 
+  // Called when the system theme changes
+  @override
+  void didChangePlatformBrightness() {
+    super.didChangePlatformBrightness();
+    // Reapply the map theme when the system theme changes
+    if (_mapController != null) {
+      _applyMapTheme();
+    }
+  }
+
+  void _applyMapTheme() async {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    String style;
+
+    // Load the appropriate style based on system theme
+    if (isDarkMode) {
+      style = await rootBundle.loadString('assets/mapStyles/dark.json');
+    } else {
+      style = await rootBundle.loadString('assets/mapStyles/standard.json');
+    }
+
+    // Apply the selected map style (dark or standard)
+    _mapController?.setMapStyle(style);
+  }
+
+  Future<void> _loadMapStyle() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? mapStyleKey = prefs.getString('mapStyle') ?? 'default';
+
+    if (mapStyleKey != 'default') {
+      String mapStyleJson =
+          await rootBundle.loadString('assets/mapStyles/$mapStyleKey.json');
+      setState(() {
+        _selectedMapStyle = mapStyleJson;
+      });
+    } else {
+      setState(() {
+        _selectedMapStyle = null;
+      });
+    }
+  }
+
   @override
   void dispose() {
     _filterController.close();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
-  Future<void> _fetchMarkers() async {
-    setState(() {
-      isLoading = true;
-    });
+  MapType _currentMapType = MapType.normal; // Default map type
 
-    try {
-      // Call the service with _selectedVehicleTypes passed as the filter
-      final result = await _mapService.fetchAndCreateMarkers(
-        _markers,
-        _markerInfoMap,
-        _selectedVehicleTypes, // Pass the selected vehicle types
-      );
-
-      setState(() {
-        _markers.clear();
-        _markers.addAll(result['markers']);
-        _markerInfoMap.clear();
-        _markerInfoMap.addAll(result['markerInfoMap']);
-        isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
-      Fluttertoast.showToast(
-          msg: 'Error fetching markers: $e',
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.black,
-          textColor: Colors.white,
-          fontSize: 16.0);
-    }
-  }
-
-  Future<void> _initializeLocation() async {
-    setState(() {
-      isLoadingLocation = true; // Start showing loading spinner
-    });
-    try {
-      Position position = await Geolocator.getCurrentPosition();
-      setState(() {
-        currentLocation = LatLng(position.latitude, position.longitude);
-        isLoadingLocation = false; // Location fetched successfully
-      });
-      _moveCameraToCurrentLocation();
-    } catch (e) {
-      Fluttertoast.showToast(
-        msg: 'Error fetching location: $e',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        backgroundColor: Colors.black,
-        textColor: Colors.white,
-        fontSize: 16.0,
-      );
-      setState(() {
-        isLoadingLocation = false; // Stop loading even if location fetch failed
-        // Optionally, set a default location or handle accordingly
-      });
-    }
+  void _showMapTypeDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Select Map  Theme'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              // const Text('Map Type'),
+              // ListTile(
+              //   title: const Text('Normal'),
+              //   onTap: () {
+              //     _changeMapType(MapType.normal);
+              //     Navigator.of(context).pop();
+              //   },
+              // ),
+              // ListTile(
+              //   title: const Text('Satellite'),
+              //   onTap: () {
+              //     _changeMapType(MapType.satellite);
+              //     Navigator.of(context).pop();
+              //   },
+              // ),
+              // ListTile(
+              //   title: const Text('Terrain'),
+              //   onTap: () {
+              //     _changeMapType(MapType.terrain);
+              //     Navigator.of(context).pop();
+              //   },
+              // ),
+              // ListTile(
+              //   title: const Text('Hybrid'),
+              //   onTap: () {
+              //     _changeMapType(MapType.hybrid);
+              //     Navigator.of(context).pop();
+              //   },
+              // ),
+              // const Divider(),
+              ListTile(
+                title: const Text('Standard'),
+                onTap: () {
+                  _changeMapTheme('standard'); // Change to standard theme
+                  Navigator.of(context).pop();
+                },
+              ),
+              ListTile(
+                title: const Text('Aubergine'),
+                onTap: () {
+                  _changeMapTheme('aubergine'); // Change to aubergine theme
+                  Navigator.of(context).pop();
+                },
+              ),
+              ListTile(
+                title: const Text('Dark'),
+                onTap: () {
+                  _changeMapTheme('dark'); // Change to dark theme
+                  Navigator.of(context).pop();
+                },
+              ),
+              ListTile(
+                title: const Text('Night'),
+                onTap: () {
+                  _changeMapTheme('night'); // Change to night theme
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _moveCameraToCurrentLocation() {
@@ -163,182 +240,11 @@ class _MapPageState extends State<MapPage> {
     }
   }
 
-  Future<void> _fetchAreas() async {
-    try {
-      List<Area> areas = await _areaService.fetchAreas();
-      setState(() {
-        polygons = areas.map((area) => area.polygon).toSet();
-      });
-    } catch (e) {
-      Fluttertoast.showToast(
-          msg: 'Error fetching areas: $e',
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.black,
-          textColor: Colors.white,
-          fontSize: 16.0);
-    }
-  }
-
-  Future<void> _fetchVehiculs() async {
-    setState(() {
-      isLoading = true; // Show loading indicator
-    });
-
-    final scooterIcon =
-        await createCustomIcon(Icons.electric_scooter, Colors.blue);
-    final ebikeIcon = await createCustomIcon(Icons.pedal_bike, Colors.green);
-    final parkingIcon = await createCustomIcon(Icons.local_parking, Colors.red);
-
-    try {
-      List<Parking> parkings = await _parkingService.fetchParkings();
-
-      List<Vehicle> vehicles = await _vehicleService.fetchVehicles();
-
-      final filteredVehicles = vehicles.where((vehicle) {
-        if (_selectedVehicleTypes.isEmpty) return true; // No filter selected
-        return _selectedVehicleTypes.any(
-            (type) => vehicle.model.toLowerCase().contains(type.toLowerCase()));
-      }).toList();
-
-      final newMarkers = <Marker>{};
-      final newMarkerInfo = <MarkerId, MarkerInfo>{};
-      for (var parking in parkings) {
-        if (parking.coordinates.latitude == 0.0 ||
-            parking.coordinates.longitude == 0.0) {
-          continue; // Skip invalid data
-        }
-
-        final markerId = MarkerId(parking.id);
-        final markerIcon = getMarkerIcon(
-          null, // No vehicle, so we pass null
-          BitmapDescriptor.defaultMarker, // Placeholder for scooters
-          BitmapDescriptor.defaultMarker, // Placeholder for ebikes
-          parkingIcon, // Pass the parking icon
-        );
-        final marker = Marker(
-          markerId: markerId,
-          icon: markerIcon,
-          position: LatLng(
-              parking.coordinates.latitude, parking.coordinates.longitude),
-          onTap: () => _onMarkerTap(markerId),
-          infoWindow: InfoWindow(
-            title: parking.name,
-            snippet:
-                'Capacity: ${parking.currentCapacity}/${parking.maxCapacity}',
-          ),
-        );
-        newMarkers.add(marker);
-        newMarkerInfo[markerId] = MarkerInfo(
-          id: parking.id,
-          model: parking.name,
-          isAvailable: parking.isOpen,
-          isParking: true,
-          parking: parking,
-          vehicle: null,
-          // No vehicle, only parking
-          isDestination: false,
-        );
-      }
-      for (var vehicle in filteredVehicles) {
-        if (vehicle.latitude == null || vehicle.longitude == null) {
-          continue; // Skip invalid data
-        }
-
-        final markerIcon = getMarkerIcon(
-            vehicle, scooterIcon, ebikeIcon, BitmapDescriptor.defaultMarker);
-        final markerId = MarkerId(vehicle.id);
-
-        final marker = Marker(
-          markerId: markerId,
-          icon: markerIcon,
-          position: LatLng(vehicle.latitude!, vehicle.longitude!),
-          onTap: () => _onMarkerTap(markerId),
-          infoWindow: InfoWindow(
-            title: vehicle.model,
-            snippet: vehicle.isAvailable ? 'Available' : 'Not Available',
-          ),
-        );
-
-        newMarkers.add(marker);
-        newMarkerInfo[markerId] = MarkerInfo(
-            id: vehicle.id,
-            model: vehicle.model,
-            isAvailable: vehicle.isAvailable,
-            vehicle: vehicle,
-            isParking: false,
-            isDestination: false);
-      }
-      setState(() {
-        _markers.clear(); // Clear existing markers
-        _markers.addAll(newMarkers); // Add new filtered markers
-        _markerInfoMap.clear(); // Clear existing marker info
-        _markerInfoMap.addAll(newMarkerInfo); // Add new filtered marker info
-        isLoading = false; // Hide loading indicator
-      });
-    } catch (e) {
-      Fluttertoast.showToast(
-          msg: 'Error fetching vehicles: $e',
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.black,
-          textColor: Colors.white,
-          fontSize: 16.0);
-      setState(() {
-        isLoading = false; // Hide loading indicator on error
-      });
-    }
-  }
-
-  MapType _currentMapType = MapType.normal; // Default map type
-
-  void _showMapTypeDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Select Map Type'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              ListTile(
-                title: const Text('Normal'),
-                onTap: () {
-                  _changeMapType(MapType.normal);
-                },
-              ),
-              ListTile(
-                title: const Text('Satellite'),
-                onTap: () {
-                  _changeMapType(MapType.satellite);
-                },
-              ),
-              ListTile(
-                title: const Text('Terrain'),
-                onTap: () {
-                  _changeMapType(MapType.terrain);
-                },
-              ),
-              ListTile(
-                title: const Text('Hybrid'),
-                onTap: () {
-                  _changeMapType(MapType.hybrid);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       key: scaffoldKey,
-      drawer: _buildLeftDrawer(),
+      drawer: _getDrawerForRole(client!),
       endDrawer: _buildRightDrawer(),
       body: Stack(
         children: [
@@ -350,12 +256,383 @@ class _MapPageState extends State<MapPage> {
           InfoButton(scaffoldKey: scaffoldKey),
           if (currentLocation != null) _buildCurrentLocationButton(),
           if (currentLocation != null) _buildMapGuidButton(),
-          if (currentLocation != null) _buildScanCodeButton(),
+          if (currentLocation != null) _buildScanCodeButton(client!),
           if (currentLocation != null) _buildMapStyleButton(),
           if (isLoadingLocation)
             const Center(
               child: CircularProgressIndicator(),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _getDrawerForRole(Client client) {
+    switch (client.role.toLowerCase()) {
+      case 'juicer':
+        return _buildJuicerLeftDrawer(client);
+      case 'tech':
+        return _buildTechLeftDrawer(client);
+      default:
+        return _buildLeftDrawer(client);
+    }
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 16.0,
+          fontWeight: FontWeight.bold,
+          color: Colors.grey[700],
+        ),
+      ),
+    );
+  }
+
+  Drawer _buildLeftDrawer(Client client) {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero, // Remove default padding
+        children: [
+          buildUserAccountsDrawerHeader(context),
+
+          // Account Section
+          _buildSectionHeader('Account'),
+          buildListTile(
+            'Balance',
+            Icons.account_balance,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) =>
+                        BalanceAndPricingPage(client: client)),
+              );
+            },
+            value: client.balance.toString(),
+          ),
+          buildListTile(
+            'Profile',
+            Icons.person,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => ClientProfilePage(client: client)),
+              );
+            },
+          ),
+          buildListTile(
+            'Share',
+            Icons.share,
+            () {
+              showShareBottomSheet(context, client.userId);
+            },
+          ),
+
+          const Divider(),
+          // Visual separator
+
+          // Activities Section
+          _buildSectionHeader('Activities'),
+          buildListTile(
+            'Ride History',
+            Icons.history,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => HistoryPage(client: client)),
+              );
+            },
+          ),
+          buildListTile(
+            'Notifications',
+            Icons.notifications,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => NotificationsPage(client: client)),
+              );
+            },
+          ),
+
+          const Divider(),
+          // Visual separator
+
+          // Support Section
+          _buildSectionHeader('Support'),
+          buildListTile(
+            'Support',
+            Icons.support,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => SupportPage(client: client)),
+              );
+            },
+          ),
+          buildListTile(
+            'Feedback',
+            Icons.feedback,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const FeedbackPage()),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Drawer _buildJuicerLeftDrawer(Client client) {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          buildUserAccountsDrawerHeader(context),
+
+          // Dashboard Section
+          _buildSectionHeader('Dashboard'),
+          buildListTile(
+            'Dashboard Home',
+            Icons.dashboard,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => JuicerDashboardPage(client: client)),
+              );
+            },
+          ),
+
+          const Divider(),
+
+          // Management Section
+          _buildSectionHeader('Management'),
+          buildListTile(
+            'Vehicle List',
+            Icons.directions_car,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => JuicerVehicleListPage(
+                        client: client, vehicles: _vehicleList)),
+              );
+            },
+          ),
+          buildListTile(
+            'Task List',
+            Icons.list_alt,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => JuicerTaskListPage(client: client)),
+              );
+            },
+          ),
+          buildListTile(
+            'Battery Management',
+            Icons.battery_full,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const BatteryManagementPage()),
+              );
+            },
+          ),
+          buildListTile(
+            'Communication',
+            Icons.message,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => SessionListPage(client: client)),
+              );
+            },
+          ),
+
+          const Divider(),
+
+          // Earnings Section
+          _buildSectionHeader('Earnings'),
+          buildListTile(
+            'Earnings',
+            Icons.attach_money,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => JuicerEarningsPage(client: client)),
+              );
+            },
+          ),
+
+          const Divider(),
+
+          // Account Section
+          _buildSectionHeader('Account'),
+          buildListTile(
+            'Notifications',
+            Icons.notifications,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => NotificationsPage(client: client)),
+              );
+            },
+          ),
+          buildListTile(
+            'Support',
+            Icons.support_agent,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => SupportPage(client: client)),
+              );
+            },
+          ),
+          buildListTile(
+            'Profile',
+            Icons.person,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => ClientProfilePage(client: client)),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Drawer _buildTechLeftDrawer(Client client) {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          buildUserAccountsDrawerHeader(context),
+
+          // Work Section
+          _buildSectionHeader('Work'),
+          buildListTile(
+            'Work Order Management',
+            Icons.assignment,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) =>
+                        TechWorkOrderManagementPage(client: client)),
+              );
+            },
+          ),
+          buildListTile(
+            'Remote Diagnostics',
+            Icons.phonelink_setup,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => TechRemoteDiagnosticsPage(
+                        client: client, vehicles: _vehicleList)),
+              );
+            },
+          ),
+
+          const Divider(),
+
+          // Monitoring Section
+          _buildSectionHeader('Monitoring'),
+          buildListTile(
+            'Performance Metrics',
+            Icons.bar_chart,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) =>
+                        TechPerformanceMetricsPage(client: client)),
+              );
+            },
+          ),
+
+          const Divider(),
+
+          // Account Section
+          _buildSectionHeader('Account'),
+          buildListTile(
+            'Balance',
+            Icons.account_balance,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) =>
+                        BalanceAndPricingPage(client: client)),
+              );
+            },
+            value: client.balance.toString(),
+          ),
+          buildListTile(
+            'Ride History',
+            Icons.history,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => HistoryPage(client: client)),
+              );
+            },
+          ),
+          buildListTile(
+            'Notifications',
+            Icons.notifications,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => NotificationsPage(client: client)),
+              );
+            },
+          ),
+          buildListTile(
+            'Support',
+            Icons.support_agent,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => SupportPage(client: client)),
+              );
+            },
+          ),
+          buildListTile(
+            'Profile',
+            Icons.person,
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => ClientProfilePage(client: client)),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -373,6 +650,7 @@ class _MapPageState extends State<MapPage> {
       ),
       onMapCreated: (GoogleMapController controller) {
         _mapController = controller;
+        _applyMapTheme(); // Apply map theme based on system theme
       },
       polygons: polygons,
       markers: _markers,
@@ -474,8 +752,10 @@ class _MapPageState extends State<MapPage> {
         context: context,
         builder: (context) => VehicleBottomSheet(
           context: context,
-          markerInfo: markerInfo, // Pass vehicle marker information
-          currentLocation: currentLocation, // Pass current location
+          markerInfo: markerInfo,
+          // Pass vehicle marker information
+          currentLocation: currentLocation,
+          // Pass current location
           drawRoute: (LatLng origin, LatLng destination, MarkerId markerId) {
             _drawRoute(
                 origin, destination, markerId); // Implement route drawing
@@ -492,7 +772,7 @@ class _MapPageState extends State<MapPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: isDarkMode ? Colors.black : Colors.white,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) {
@@ -502,7 +782,7 @@ class _MapPageState extends State<MapPage> {
             return SingleChildScrollView(
               controller: scrollController,
               child: Padding(
-                padding: EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
@@ -511,12 +791,12 @@ class _MapPageState extends State<MapPage> {
                       parking.name,
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     // Parking Address
                     Row(
                       children: [
-                        Icon(Icons.location_on, color: Colors.grey),
-                        SizedBox(width: 4),
+                        const Icon(Icons.location_on, color: Colors.grey),
+                        const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             parking.address,
@@ -525,7 +805,7 @@ class _MapPageState extends State<MapPage> {
                         ),
                       ],
                     ),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     // Status and Capacity
                     Row(
                       children: [
@@ -543,27 +823,28 @@ class _MapPageState extends State<MapPage> {
                         ),
                       ],
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Text(
                       'Capacity: ${parking.currentCapacity}/${parking.maxCapacity}',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     // Opening Hours
                     Text(
                       'Hours: ${parking.openingTime} - ${parking.closingTime}',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     // Parking Pictures (if available)
                     _buildParkingImages(parking),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     // Close Button
                     Align(
                       alignment: Alignment.bottomRight,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: isDarkMode ? Colors.grey[700] : Colors.blue,
+                          backgroundColor:
+                              isDarkMode ? Colors.grey[700] : Colors.blue,
                         ),
                         onPressed: () {
                           Navigator.of(context).pop();
@@ -580,19 +861,20 @@ class _MapPageState extends State<MapPage> {
       },
     );
   }
+
   Widget _buildParkingImages(Parking parking) {
     if (parking.images.isEmpty) {
-      return Text('No images available.');
+      return const Text('No images available.');
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'Photos',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         Container(
           height: 200,
           child: ListView.builder(
@@ -600,23 +882,42 @@ class _MapPageState extends State<MapPage> {
             itemCount: parking.images.length,
             itemBuilder: (context, index) {
               final imageUrl = parking.images[index];
-              return Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    imageUrl,
-                    width: 300,
-                    height: 200,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        width: 300,
-                        height: 200,
-                        color: Colors.grey[300],
-                        child: Icon(Icons.broken_image, size: 50, color: Colors.grey),
-                      );
-                    },
+
+              return GestureDetector(
+                onTap: () => _showImagePreview(context, imageUrl),
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      imageUrl.isNotEmpty ? imageUrl : _defaultImageUrl(),
+                      width: 300,
+                      height: 200,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          width: 300,
+                          height: 200,
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.broken_image,
+                              size: 50, color: Colors.grey),
+                        );
+                      },
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) {
+                          return child;
+                        } else {
+                          return Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      (loadingProgress.expectedTotalBytes!)
+                                  : null,
+                            ),
+                          );
+                        }
+                      },
+                    ),
                   ),
                 ),
               );
@@ -625,6 +926,28 @@ class _MapPageState extends State<MapPage> {
         ),
       ],
     );
+  }
+
+  void _showImagePreview(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.network(imageUrl),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _defaultImageUrl() {
+    return 'https://placehold.co/300x200?text=No+Image'; // Default image placeholder
   }
 
   void _showDestinationDetails(MarkerInfo markerInfo) {
@@ -718,8 +1041,6 @@ class _MapPageState extends State<MapPage> {
       },
     );
   }
-
-  final bool _showMapGuide = false;
 
   Widget _buildRefreshButton() {
     return Builder(
@@ -909,7 +1230,8 @@ class _MapPageState extends State<MapPage> {
 
   Widget _buildMapGuidButton() {
     return Positioned(
-      bottom: 140, // Positioned above the Current Location button
+      bottom: 140,
+      // Positioned above the Current Location button
       right: 20,
       child: Tooltip(
         message: _showMapGuide ? 'Close Map Guide' : 'Open Map Guide',
@@ -935,8 +1257,11 @@ class _MapPageState extends State<MapPage> {
     );
   }
 
-  Widget _buildScanCodeButton() {
-    final buttonColor = Colors.red; // Set the color to red as in the image
+  Widget _buildScanCodeButton(Client client) {
+    final buttonColor =
+        (client.balance > 0 || client.role.toLowerCase() == 'juicer')
+            ? Colors.red
+            : Colors.grey; // Red if balance > 0 or role is juicer, grey if not
     final iconColor = Colors.white; // White text color for the Scan button
 
     return Positioned(
@@ -949,16 +1274,33 @@ class _MapPageState extends State<MapPage> {
       child: Tooltip(
         message: 'Scan QR Code', // Tooltip message
         child: RawMaterialButton(
-          onPressed: () {
-            showModalBottomSheet(
-              context: context,
-              builder: (BuildContext context) {
-                return const CodeInputBottomSheet(); // Custom bottom sheet widget
-              },
-            );
-          },
+          onPressed:
+              (client.balance > 0 || client.role.toLowerCase() == 'juicer')
+                  ? () {
+                      // Check if any required info is missing
+                      List<String> missingFields = _getMissingFields(client);
+
+                      if (missingFields.isNotEmpty) {
+                        _showMissingInfoDialog(
+                            missingFields); // Show dialog if info is missing
+                      } else {
+                        // Proceed to show the scan bottom sheet if no info is missing
+                        showModalBottomSheet(
+                          context: context,
+                          builder: (BuildContext context) {
+                            if (client.role.toLowerCase() == 'juicer') {
+                              return _buildJuicerOperationsBottomSheet(); // Custom bottom sheet for Juicer operations
+                            } else {
+                              return const CodeInputBottomSheet(); // Custom bottom sheet widget for clients
+                            }
+                          },
+                        );
+                      }
+                    }
+                  : null,
+          // Disable the button if balance is 0 and role is not juicer
           fillColor: buttonColor,
-          // Set the button background color to red
+          // Set the button background color to red or grey depending on balance or role
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(
                 30.0), // Rounded corners for a smoother look
@@ -977,6 +1319,96 @@ class _MapPageState extends State<MapPage> {
           ),
         ),
       ),
+    );
+  }
+
+// Method to get missing fields
+  List<String> _getMissingFields(Client client) {
+    List<String> missingFields = [];
+    if (client.fullName.isEmpty) missingFields.add('Full Name');
+    if (client.email.isEmpty) missingFields.add('Email');
+    if (client.phoneNumber.isEmpty) missingFields.add('Phone Number');
+    if (client.address.isEmpty) missingFields.add('Address');
+    return missingFields;
+  }
+
+// Custom bottom sheet for Juicer operations
+  Widget _buildJuicerOperationsBottomSheet() {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Theme.of(context).canvasColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Juicer Operations',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 16),
+          ListTile(
+            leading: const Icon(Icons.report_problem),
+            title: const Text('Report a Problem'),
+            onTap: () {
+              // Handle reporting a problem
+              Navigator.pop(context);
+              // Add your problem reporting logic here
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.lock_open),
+            title: const Text('Unlock Vehicle to Change Battery'),
+            onTap: () {
+              // Handle unlocking vehicle
+              Navigator.pop(context);
+              // Add your unlocking logic here
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.battery_charging_full),
+            title: const Text('Check Battery Level'),
+            onTap: () {
+              // Handle checking battery level
+              Navigator.pop(context);
+              // Add your battery level checking logic here
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.military_tech),
+            title: const Text('Perform Maintenance'),
+            onTap: () {
+              // Handle maintenance operation
+              Navigator.pop(context);
+              // Add your maintenance logic here
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+// Dialog to show missing info
+  void _showMissingInfoDialog(List<String> missingFields) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Incomplete Profile"),
+          content: Text("The following fields are missing:\n\n" +
+              missingFields.join("\n")),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -1007,11 +1439,244 @@ class _MapPageState extends State<MapPage> {
     );
   }
 
+  Future<void> _fetchMarkers() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      // Call the service with _selectedVehicleTypes passed as the filter
+      final result = await _mapService.fetchAndCreateMarkers(
+        _markers, _markerInfoMap,
+        _selectedVehicleTypes, // Pass the selected vehicle types
+      );
+
+      setState(() {
+        _markers.clear();
+        _markers.addAll(result['markers']);
+        _markerInfoMap.clear();
+        _markerInfoMap.addAll(result['markerInfoMap']);
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      Fluttertoast.showToast(
+          msg: 'Error fetching markers: $e',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.black,
+          textColor: Colors.white,
+          fontSize: 16.0);
+    }
+  }
+
+  Future<void> _initializeLocation() async {
+    setState(() {
+      isLoadingLocation = true; // Start showing loading spinner
+    });
+    try {
+      Position position = await Geolocator.getCurrentPosition();
+      setState(() {
+        currentLocation = LatLng(position.latitude, position.longitude);
+        isLoadingLocation = false; // Location fetched successfully
+      });
+      _moveCameraToCurrentLocation();
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: 'Error fetching location: $e',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.black,
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
+      setState(() {
+        isLoadingLocation = false; // Stop loading even if location fetch failed
+        // Optionally, set a default location or handle accordingly
+      });
+    }
+  }
+
+  Future<void> _fetchAreas() async {
+    try {
+      List<Area> areas = await _areaService.fetchAreas();
+      setState(() {
+        polygons = areas.map((area) => area.polygon).toSet();
+      });
+    } catch (e) {
+      Fluttertoast.showToast(
+          msg: 'Error fetching areas: $e',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.black,
+          textColor: Colors.white,
+          fontSize: 16.0);
+    }
+  }
+
+  Future<void> showroledialog() async {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("ROle"),
+          content: Text("ROle :\n\n" + widget.client!.role),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _fetchVehiculs() async {
+    setState(() {
+      isLoading = true; // Show loading indicator
+    });
+
+    final scooterIcon =
+        await createCustomIcon(Icons.electric_scooter, Colors.blue);
+    final ebikeIcon = await createCustomIcon(Icons.pedal_bike, Colors.green);
+    final parkingIcon = await createCustomIcon(Icons.local_parking, Colors.red);
+
+    try {
+      List<Parking> parkings = await _parkingService.fetchParkings();
+
+      List<Vehicle> vehicles =
+           await _vehicleService.fetchVehicles() ;
+      _vehicleList = vehicles;
+      final filteredVehicles = vehicles.where((vehicle) {
+        if (_selectedVehicleTypes.isEmpty) return true; // No filter selected
+        return _selectedVehicleTypes.any(
+            (type) => vehicle.model.toLowerCase().contains(type.toLowerCase()));
+      }).toList();
+
+      final newMarkers = <Marker>{};
+      final newMarkerInfo = <MarkerId, MarkerInfo>{};
+      for (var parking in parkings) {
+        if (parking.coordinates.latitude == 0.0 ||
+            parking.coordinates.longitude == 0.0) {
+          continue; // Skip invalid data
+        }
+
+        final markerId = MarkerId(parking.id);
+        final markerIcon = getMarkerIcon(
+          null, // No vehicle, so we pass null
+          BitmapDescriptor.defaultMarker, // Placeholder for scooters
+          BitmapDescriptor.defaultMarker, // Placeholder for ebikes
+          parkingIcon, // Pass the parking icon
+        );
+        final marker = Marker(
+          markerId: markerId,
+          icon: markerIcon,
+          position: LatLng(
+              parking.coordinates.latitude, parking.coordinates.longitude),
+          onTap: () => _onMarkerTap(markerId),
+          infoWindow: InfoWindow(
+            title: parking.name,
+            snippet:
+                'Capacity: ${parking.currentCapacity}/${parking.maxCapacity}',
+          ),
+        );
+        newMarkers.add(marker);
+        newMarkerInfo[markerId] = MarkerInfo(
+          id: parking.id,
+          model: parking.name,
+          isAvailable: parking.isOpen,
+          isParking: true,
+          parking: parking,
+          vehicle: null,
+          // No vehicle, only parking
+          isDestination: false,
+        );
+      }
+      for (var vehicle in filteredVehicles) {
+        if (vehicle.latitude == null || vehicle.longitude == null) {
+          continue; // Skip invalid data
+        }
+
+        final markerIcon = getMarkerIcon(
+            vehicle, scooterIcon, ebikeIcon, BitmapDescriptor.defaultMarker);
+        final markerId = MarkerId(vehicle.id);
+
+        final marker = Marker(
+          markerId: markerId,
+          icon: markerIcon,
+          position: LatLng(vehicle.latitude!, vehicle.longitude!),
+          onTap: () => _onMarkerTap(markerId),
+          infoWindow: InfoWindow(
+            title: vehicle.model,
+            snippet: vehicle.isAvailable ? 'Available' : 'Not Available',
+          ),
+        );
+
+        newMarkers.add(marker);
+        newMarkerInfo[markerId] = MarkerInfo(
+            id: vehicle.id,
+            model: vehicle.model,
+            isAvailable: vehicle.isAvailable,
+            vehicle: vehicle,
+            isParking: false,
+            isDestination: false);
+      }
+      setState(() {
+        _markers.clear(); // Clear existing markers
+        _markers.addAll(newMarkers); // Add new filtered markers
+        _markerInfoMap.clear(); // Clear existing marker info
+        _markerInfoMap.addAll(newMarkerInfo); // Add new filtered marker info
+        isLoading = false; // Hide loading indicator
+      });
+    } catch (e) {
+      Fluttertoast.showToast(
+          msg: 'Error fetching vehicles: $e',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.black,
+          textColor: Colors.white,
+          fontSize: 16.0);
+      setState(() {
+        isLoading = false; // Hide loading indicator on error
+      });
+    }
+  }
+
   void _changeMapType(MapType mapType) {
     setState(() {
       _currentMapType = mapType;
     });
     Navigator.of(context).pop(); // Close the dialog
+  }
+
+  void _changeMapTheme(String theme) async {
+    String style;
+    switch (theme) {
+      case 'aubergine':
+        style = await rootBundle.loadString('assets/mapStyles/aubergine.json');
+        break;
+      case 'dark':
+        style = await rootBundle.loadString('assets/mapStyles/dark.json');
+        break;
+      case 'night':
+        style = await rootBundle.loadString('assets/mapStyles/night.json');
+        break;
+      case 'standard':
+      default:
+        style = await rootBundle.loadString('assets/mapStyles/standard.json');
+        break;
+    }
+
+    // Apply the selected map theme (style)
+    _mapController?.setMapStyle(style);
   }
 
   void _showMapGuideBottomSheet(BuildContext context) {
@@ -1111,94 +1776,6 @@ class _MapPageState extends State<MapPage> {
     );
   }
 
-  Drawer _buildLeftDrawer() {
-    return Drawer(
-      child: ListView(
-        children: [
-          buildUserAccountsDrawerHeader(context),
-
-          // buildUserAccountsDrawerHeader(context),
-          buildListTile(
-            'Balance',
-            Icons.account_balance,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => BalanceAndPricingPage (client: widget.client)),
-              );
-            },
-            value: "0",
-          ),
-          buildListTile(
-            'Ride history',
-            Icons.history,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => HistoryPage(client: widget.client)),
-              );
-            },
-          ),
-          buildListTile(
-            'Notifications',
-            Icons.notifications,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) =>
-                        NotificationsPage(client: widget.client)),
-              );
-            },
-          ),
-          buildListTile(
-            'Support',
-            Icons.support,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => SupportPage(client: widget.client)),
-              );
-            },
-          ),
-          buildListTile(
-            'profile'.tr(),
-            Icons.person,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) =>
-                        ClientProfilePage(client: widget.client)),
-              );
-            },
-          ),
-          buildListTile(
-            'share'.tr(),
-            Icons.share,
-            () {
-              showShareBottomSheet(
-                  context, "HGH3YJJ"); // Use your dynamic promo code here
-            },
-          ),
-          buildListTile(
-            'feedback'.tr(),
-            Icons.feedback,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const FeedbackPage()),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget buildUserAccountsDrawerHeader(BuildContext context) {
     // Determine if the current theme is dark or light
     bool isDarkTheme = Theme.of(context).brightness == Brightness.dark;
@@ -1294,6 +1871,7 @@ class _MapPageState extends State<MapPage> {
           actions: [
             TextButton(
               onPressed: () {
+                GoogleSignIn().signOut();
                 Navigator.of(context)
                     .pop(false); // Return false to indicate cancel
               },
@@ -1648,7 +2226,7 @@ class _MapPageState extends State<MapPage> {
       _polylines.clear(); // Clear any previous polylines
       _polylines.add(
         Polyline(
-          polylineId: PolylineId('route'),
+          polylineId: const PolylineId('route'),
           visible: true,
           points: polylinePoints,
           color: Colors.blue,

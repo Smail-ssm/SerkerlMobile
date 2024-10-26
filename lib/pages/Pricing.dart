@@ -1,19 +1,21 @@
-import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:checkout_screen_ui/checkout_page/checkout_page.dart';
-import 'package:checkout_screen_ui/models/price_item.dart';
 import 'package:checkout_screen_ui/ui_components/pay_button.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // For currency formatting
+
 import '../model/client.dart';
-import '../services/SubscriptionService.dart';
 import '../model/subscription.dart';
+import '../model/userPurchase.dart';
+import '../services/SubscriptionService.dart';
 import '../util/theme.dart';
+import '../util/util.dart';
 
 class BalanceAndPricingPage extends StatefulWidget {
   final Client? client;
 
-  const BalanceAndPricingPage({Key? key, required this.client}) : super(key: key);
+  const BalanceAndPricingPage({Key? key, required this.client})
+      : super(key: key);
 
   @override
   _BalanceAndPricingPageState createState() => _BalanceAndPricingPageState();
@@ -29,13 +31,15 @@ class _BalanceAndPricingPageState extends State<BalanceAndPricingPage> {
 
   // GlobalKeys for the checkout form
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final GlobalKey<CardPayButtonState> _payBtnKey = GlobalKey<CardPayButtonState>();
+  final GlobalKey<CardPayButtonState> _payBtnKey =
+      GlobalKey<CardPayButtonState>();
 
   // Cost per minute in TND
   final double costPerMinute = 0.85; // Adjusted to TND
 
   // Currency formatter for TND
-  final NumberFormat currencyFormat = NumberFormat.currency(locale: 'fr_TN', symbol: 'TND ');
+  final NumberFormat currencyFormat =
+      NumberFormat.currency(locale: 'fr_TN', symbol: 'TND ');
 
   @override
   void initState() {
@@ -51,7 +55,10 @@ class _BalanceAndPricingPageState extends State<BalanceAndPricingPage> {
 
     try {
       String userId = widget.client!.userId;
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
       if (userDoc.exists) {
         setState(() {
           _balance = (userDoc.get('balance') as num).toDouble();
@@ -61,7 +68,8 @@ class _BalanceAndPricingPageState extends State<BalanceAndPricingPage> {
     } catch (e) {
       print('Error fetching balance: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('An error occurred while fetching balance')),
+        const SnackBar(
+            content: Text('An error occurred while fetching balance')),
       );
     } finally {
       setState(() {
@@ -76,7 +84,8 @@ class _BalanceAndPricingPageState extends State<BalanceAndPricingPage> {
     });
 
     try {
-      List<Subscription> subscriptions = await _subscriptionService.getAllSubscriptions();
+      List<Subscription> subscriptions =
+          await _subscriptionService.getAllSubscriptions();
       setState(() {
         _subscriptions = subscriptions;
       });
@@ -86,17 +95,6 @@ class _BalanceAndPricingPageState extends State<BalanceAndPricingPage> {
       setState(() {
         _isLoadingSubscriptions = false;
       });
-    }
-  }
-
-  Future<void> _activatePlan(Subscription subscription) async {
-    try {
-      await _subscriptionService.activateSubscription(subscription.id);
-      _showSuccessDialog('Plan activated successfully!');
-      // Optionally, update balance or other user data here
-      _fetchLatestBalance(); // Refresh balance
-    } catch (e) {
-      _showErrorDialog('Failed to activate plan');
     }
   }
 
@@ -143,86 +141,146 @@ class _BalanceAndPricingPageState extends State<BalanceAndPricingPage> {
     );
   }
 
-  // Method to show the checkout screen
+  // Method to show a dialog and then simulate the payment process
   void _showCheckoutScreen(Subscription subscription) {
-    final List<PriceItem> priceItems = [
-      PriceItem(
-          name: subscription.title,
-          quantity: 1,
-          itemCostCents: (subscription.price * 100).toInt()),
-    ];
-
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (context) => Theme(
-        data: lightTheme,  // Force light theme
-        child: Scaffold(
-          backgroundColor: Colors.white,  // Set background color to white
-          appBar: AppBar(
-            title: const Text('Subscription Service'),
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Simulate Payment'),
+          content: Text(
+            'Do you want to simulate a payment for the ${subscription.title} plan?',
           ),
-          body: CheckoutPage(
-            data: CheckoutData(
-              priceItems: priceItems,
-              taxRate: 0.07,
-              payToName: '',
-              displayNativePay: false,
-              isApple: Platform.isIOS,
-              onCardPay: (paymentInfo, checkoutResults) {
-                print('Card Payment Clicked');
-                _activatePlan(subscription);
-                Navigator.of(context).pop(); // Close checkout page after payment
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Dismiss the dialog
               },
-              onBack: () => Navigator.of(context).pop(),
-              displayEmail: true,
-              lockEmail: false,
-              initEmail: 'user@example.com',
-              initPhone: '1234567890',
-              initBuyerName: 'John Doe',
-              cashPrice: subscription.price,
-              formKey: _formKey,
-              payBtnKey: _payBtnKey,
+              child: const Text('Cancel'),
             ),
-            footer: _buildFooter(context),
-          ),
-        ),
-      ),
-    ));
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Dismiss the dialog
+                _simulatePaymentProcess(subscription); // Simulate payment
+              },
+              child: const Text('Proceed'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
-  Widget _buildFooter(BuildContext context) {
-    final theme = Theme.of(context);
-    final cancelColor = theme.colorScheme.error;
-    final confirmColor = theme.colorScheme.secondary;
+  // Simulate payment processing and update balance accordingly
+// Simulate payment processing and update balance accordingly
+  Future<void> _simulatePaymentProcess(Subscription subscription) async {
+    // Simulate a delay for payment processing
+    await Future.delayed(Duration(seconds: 2));
 
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: Text('Cancel', style: theme.textTheme.bodyMedium),
-            style: ElevatedButton.styleFrom(
-              foregroundColor: Colors.white,
-              backgroundColor: cancelColor,
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              // Implement confirmation logic if needed
-              print('Confirm clicked');
-            },
-            child: Text('Confirm', style: theme.textTheme.bodyMedium),
-            style: ElevatedButton.styleFrom(
-              foregroundColor: Colors.white,
-              backgroundColor: confirmColor,
-            ),
-          ),
-        ],
-      ),
-    );
+    // Randomly decide if payment is successful or failed
+    bool isPaymentSuccessful = true;
+
+    if (isPaymentSuccessful) {
+      // Payment succeeded
+      // Create a UserPurchase object
+      UserPurchase userPurchase = UserPurchase(
+        id: UniqueKey().toString(),
+        // Generate a unique ID for the purchase
+        validFrom: DateTime.now(),
+        validTill: DateTime.now().add(Duration(days: subscription.validDays)),
+        subscription: subscription,
+        status: 'active',
+        client: widget.client?.fullName ?? 'Unknown',
+        // Adjust based on your Client model
+        phone: widget.client?.phoneNumber ?? 'Unknown',
+        // Adjust based on your Client model
+        unlocksCount: subscription.unlocksCount,
+        rideMinutes: subscription.rideMinutes,
+        pauseMinutes: subscription.pauseMinutes,
+        rideDistance: subscription.rideDistance,
+      );
+
+      // Save the UserPurchase to Firebase
+      await _saveUserPurchase(userPurchase);
+      await _updateUserBalance(subscription.price);
+
+      _showSuccessDialog('Payment successful! Your balance has been updated.');
+
+      // Log the result
+      print('Payment successful for subscription: ${subscription.title}');
+      print('New balance: $_balance');
+    } else {
+      // Payment failed
+      _showErrorDialog('Payment failed. Please try again.');
+
+      // Log the result
+      print('Payment failed for subscription: ${subscription.title}');
+    }
+  }
+
+// Save the UserPurchase to Firebase
+   Future<void> _saveUserPurchase(UserPurchase userPurchase) async {
+    try {
+      FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+      // Define the environment collection, replace 'preprod' with your actual environment
+      String env = getFirestoreDocument();
+
+      // Generate a Firestore-like unique ID for the purchase
+      String purchaseId = firestore.collection('dummy').doc().id;
+
+      // Construct the path to the user's purchases collection
+      String userId = widget.client!.userId;
+      CollectionReference purchasesCollection = firestore
+          .collection(env) // 'preprod'
+          .doc('UserPurchases')
+          .collection('UserPurchases')
+          .doc(userId)
+          .collection('Purchases');
+
+      // Convert the UserPurchase object to JSON
+      Map<String, dynamic> purchaseData = userPurchase.toJson();
+
+      // Save the purchase data with a generated purchase ID
+      await purchasesCollection.doc(purchaseId).set(purchaseData);
+
+      if (kDebugMode) {
+        print('UserPurchase saved successfully under the specified path.');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error saving UserPurchase: $e');
+      }
+      // Handle the error appropriately in your app
+      _showErrorDialog('An error occurred while saving your purchase.');
+    }
+  }
+
+  // Update the user's balance both locally and in Firestore
+  Future<void> _updateUserBalance(double amount) async {
+    try {
+      String userId = widget.client!.userId;
+      double newBalance = _balance + amount;
+
+// Use the same Firestore path as in fetchClientData
+      FirebaseFirestore firestore = FirebaseFirestore.instance;
+      final usersCollection = firestore.collection(getFirestoreDocument());
+
+// Update Firestore
+      await usersCollection
+          .doc('users')
+          .collection('users')
+          .doc(userId)
+          .update({'balance': newBalance});
+      // Update local state
+      setState(() {
+        _balance = newBalance;
+        widget.client?.balance = newBalance;
+      });
+    } catch (e) {
+      print('Error updating balance: $e');
+      _showErrorDialog('An error occurred while updating your balance.');
+    }
   }
 
   // UI Building Methods
@@ -239,13 +297,16 @@ class _BalanceAndPricingPageState extends State<BalanceAndPricingPage> {
     );
   }
 
-  Widget _buildPricingCard(String title, String duration, String price, {VoidCallback? onTap}) {
+  Widget _buildPricingCard(String title, String duration, String price,
+      {VoidCallback? onTap}) {
     return Card(
-      elevation: 4, // Slightly more elevation for a more pronounced shadow
+      elevation: 4,
+      // Slightly more elevation for a more pronounced shadow
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12), // Rounded corners for the card
       ),
-      margin: const EdgeInsets.symmetric(vertical: 8), // Vertical margin between cards
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      // Vertical margin between cards
       child: Padding(
         padding: const EdgeInsets.all(16.0), // Padding inside the card
         child: Column(
@@ -285,8 +346,7 @@ class _BalanceAndPricingPageState extends State<BalanceAndPricingPage> {
               ),
               overflow: TextOverflow.ellipsis,
             ),
-            if (onTap != null)
-              const SizedBox(height: 12),
+            if (onTap != null) const SizedBox(height: 12),
             if (onTap != null)
               Align(
                 alignment: Alignment.centerRight,
@@ -360,12 +420,16 @@ class _BalanceAndPricingPageState extends State<BalanceAndPricingPage> {
                         children: [
                           Text(
                             'Balance',
-                            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                            style: TextStyle(
+                                fontSize: 16, color: Colors.grey[600]),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
                             currencyFormat.format(_balance),
-                            style: TextStyle(fontSize: 24, color: Colors.green, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                                fontSize: 24,
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -384,12 +448,16 @@ class _BalanceAndPricingPageState extends State<BalanceAndPricingPage> {
                         children: [
                           Text(
                             'Ride Time',
-                            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                            style: TextStyle(
+                                fontSize: 16, color: Colors.grey[600]),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
                             '${_calculateRideTime(_balance).toStringAsFixed(1)} mins',
-                            style: TextStyle(fontSize: 24, color: Colors.blue, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                                fontSize: 24,
+                                color: Colors.blue,
+                                fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -401,7 +469,8 @@ class _BalanceAndPricingPageState extends State<BalanceAndPricingPage> {
             const SizedBox(height: 20),
             _buildSectionTitle('Pay Per Ride'),
             _buildPricingCard('E-bikes', '24/7', '1 TND unlock + 0.85 TND/min'),
-            _buildPricingCard('Scooters', '24/7', '1 TND unlock + 0.85 TND/min'),
+            _buildPricingCard(
+                'Scooters', '24/7', '1 TND unlock + 0.85 TND/min'),
             _buildSectionTitle('Memberships'),
             ElevatedButton(
               onPressed: () {
@@ -412,7 +481,9 @@ class _BalanceAndPricingPageState extends State<BalanceAndPricingPage> {
                   }
                 });
               },
-              child: Text(_showSubscriptionDetails ? 'Hide Details' : 'Check out our monthly plans'),
+              child: Text(_showSubscriptionDetails
+                  ? 'Hide Details'
+                  : 'Check out our monthly plans'),
             ),
             if (_showSubscriptionDetails)
               _isLoadingSubscriptions
@@ -427,18 +498,19 @@ class _BalanceAndPricingPageState extends State<BalanceAndPricingPage> {
   @override
   Widget build(BuildContext context) {
     return Theme(
-      data: lightTheme,  // Force light theme
+      data: lightTheme, // Force light theme
       child: Scaffold(
         appBar: AppBar(
           title: const Text('My Balance & Pricing'),
         ),
-        backgroundColor: Colors.white,  // Set background color to white
+        backgroundColor: Colors.white,
+        // Set background color to white
         body: (_isLoadingBalance)
-            ? Center(child: CircularProgressIndicator())
+            ? const Center(child: CircularProgressIndicator())
             : RefreshIndicator(
-          onRefresh: _fetchLatestBalance,
-          child: _buildContent(),
-        ),
+                onRefresh: _fetchLatestBalance,
+                child: _buildContent(),
+              ),
       ),
     );
   }
