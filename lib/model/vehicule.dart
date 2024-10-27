@@ -4,18 +4,18 @@ import 'MaintenanceLog.dart';
 import 'rental.dart';
 
 class Vehicle {
-  String id; // Unique identifier for the vehicle
-  String model; // Model of the vehicle
-  Battery battery; // Battery ID or percentage
-  bool isAvailable; // Availability status of the vehicle
-  double? latitude; // Latitude of the vehicle's location (optional)
-  double? longitude; // Longitude of the vehicle's location (optional)
-  Rental? rental; // Current rental information (optional)
-  DeviceInfo? deviceInfo; // Device information (optional)
-  int? speed; // Current speed (optional)
-  int? temperature; // Internal temperature (optional)
-  int? acceleration; // Current acceleration (optional)
-  DateTime? nextMaintenanceDate; // Scheduled maintenance date (optional)
+  String id;
+  String model;
+  Battery battery;
+  bool isAvailable;
+  double? latitude;
+  double? longitude;
+  Rental? rental;
+  DeviceInfo? deviceInfo;
+  int? speed;
+  int? temperature;
+  int? acceleration;
+  DateTime? nextMaintenanceDate;
   List<MaintenanceLog>? maintenanceLog; // Maintenance logs (optional)
   String? user; // User associated with the vehicle (optional)
   String? qrcode; // QR code associated with the vehicle (optional)
@@ -41,31 +41,31 @@ class Vehicle {
   // Factory constructor for creating a Vehicle from a JSON object
   factory Vehicle.fromJson(Map<String, dynamic> json) {
     return Vehicle(
-      id: json['id'],
-      model: json['model'],
-      battery: Battery.fromJson(json['battery']),
-      isAvailable: json['isAvailable'],
-      latitude: json['latitude'],
-      longitude: json['longitude'],
+      id: json['id'] as String,
+      model: json['model'] as String,
+      battery: Battery.fromJson(json['battery'] as Map<String, dynamic>),
+      isAvailable: json['isAvailable'] as bool,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
       rental: json['rental'] is Map<String, dynamic>
           ? Rental.fromJson(json['rental'])
           : null,
       deviceInfo: json['deviceInfo'] is Map<String, dynamic>
           ? DeviceInfo.fromJson(json['deviceInfo'])
           : null,
-      speed: json['speed']as int,
-      temperature: json['temperature'] ,
-      acceleration: json['acceleration'] ,
+      speed: json['speed'] as int?,
+      temperature: json['temperature'] as int?,
+      acceleration: json['acceleration'] as int?,
       nextMaintenanceDate: json['nextMaintenanceDate'] != null
           ? DateTime.parse(json['nextMaintenanceDate'])
           : null,
-      maintenanceLog: json['maintenanceLog']is Map<String, dynamic>
+      maintenanceLog: json['maintenanceLog'] != null && json['maintenanceLog'] is List
           ? (json['maintenanceLog'] as List)
-          .map((log) => MaintenanceLog.fromJson(log))
+          .map((log) => MaintenanceLog.fromJson(log as Map<String, dynamic>))
           .toList()
-          : null,
-      user: json['user'],
-      qrcode: json['qrcode'],
+          : [], // Default to an empty list if maintenanceLog is null
+      user: json['user'] as String?,
+      qrcode: json['qrcode'] as String?,
     );
   }
 
@@ -74,7 +74,7 @@ class Vehicle {
     return {
       'id': id,
       'model': model,
-      'batteryID': battery,
+      'battery': battery.toJson(),
       'isAvailable': isAvailable,
       'latitude': latitude,
       'longitude': longitude,

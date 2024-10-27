@@ -24,15 +24,15 @@ class Rental {
   // Factory constructor for creating a Rental from a JSON object
   factory Rental.fromJson(Map<String, dynamic> json) {
     return Rental(
-      id: json['id'],
-      vId: json['vId'],
-      startTime: DateTime.parse(json['startTime']),
-      expectedReturnTime: DateTime.parse(json['expectedReturnTime']),
-      baseRate: json['baseRate'].toDouble(),
-      unlockPrice: json['unlockPrice'].toDouble(),
-      pausePrice: json['pausePrice'].toDouble(),
-      user: json['user'],
-      notes: json['notes'],
+      id: json['id'] as String,
+      vId: json['vId'] as String,
+      startTime: json['startTime'] != null ? DateTime.parse(json['startTime']) : DateTime.now(),
+      expectedReturnTime: json['expectedReturnTime'] != null ? DateTime.parse(json['expectedReturnTime']) : DateTime.now(),
+      baseRate: (json['baseRate'] as num).toDouble(),
+      unlockPrice: (json['unlockPrice'] as num).toDouble(),
+      pausePrice: (json['pausePrice'] as num).toDouble(),
+      user: json['user'] as String?,
+      notes: json['notes'] as String?,
     );
   }
 

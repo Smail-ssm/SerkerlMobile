@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ebike/model/MaintenanceLog.dart';
 import '../model/vehicule.dart';
- import '../util/util.dart';
+import '../util/util.dart';
 
 class Vehicleservice {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -9,12 +9,9 @@ class Vehicleservice {
   Future<List<Vehicle>> fetchVehicles() async {
     try {
       String documentPath = getFirestoreDocument();
-      final VehiclesCollection = _firestore.collection(documentPath);
+      final vehiclesCollection = _firestore.collection(documentPath).doc('Vehicles').collection('Vehicles');
 
-      QuerySnapshot querySnapshot = await VehiclesCollection
-          .doc('Vehicles')
-          .collection('Vehicles')
-          .get();
+      QuerySnapshot querySnapshot = await vehiclesCollection.get();
 
       return querySnapshot.docs.map((doc) {
         Map<String, dynamic>? data = doc.data() as Map<String, dynamic>?;
@@ -22,8 +19,10 @@ class Vehicleservice {
           throw Exception('Document data is null');
         }
         data['id'] = doc.id;
+
         return Vehicle.fromJson(data);
       }).toList();
+
     } catch (e) {
       print('Error fetching Vehicles: $e');
       rethrow;

@@ -18,7 +18,8 @@ class Client {
   String referralCode; // Password for the user account
   double balance; // Password for the user account
   DateTime creationDate; // Account creation date
-
+  double lat; // Password for the user account
+  double lng; // Password for the user account
   Client({
     required this.userId,
     required this.email,
@@ -34,6 +35,8 @@ class Client {
     required this.referralCode,
     required this.balance,
     required this.creationDate,
+    required this.lat,
+    required this.lng,
   });
 
 // Add a factory constructor to create Utilisateur from Firestore data
@@ -53,6 +56,8 @@ class Client {
       referralCode: data['referralCode'] as String? ?? '',
       fcmToken: data['fcmToken'] as String? ?? '',
       balance: (data['balance'] != null) ? data['balance'].toDouble() : 0.0,
+      lat: (data['lat'] != null) ? data['lat'].toDouble() : 0.0,
+      lng: (data['lng'] != null) ? data['lng'].toDouble() : 0.0,
     );
   }
 
@@ -72,6 +77,8 @@ class Client {
       fcmToken: json['fcmToken'],
       referralCode: json['referralCode'],
       balance: json['balance'],
+      lat: json['lat'],
+      lng: json['lng'],
       creationDate: DateTime.parse(json['creationDate']),
     );
   }
@@ -91,6 +98,8 @@ class Client {
       'password': password,
       'fcmToken': fcmToken,
       'balance': balance,
+      'lat': lat,
+      'lng': lng,
       'creationDate': creationDate.toIso8601String(),
     };
   }

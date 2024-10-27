@@ -3,10 +3,9 @@ class MaintenanceLog {
   String vehicleId;
   DateTime date;
   String technicianName;
-  String type; // E.g., General, Battery, Brakes, etc.
+  String type;
   double cost;
 
-  // Individual checks
   bool batteryCheck;
   bool brakesCheck;
   bool lightsCheck;
@@ -19,7 +18,6 @@ class MaintenanceLog {
   bool drivetrainCheck;
   bool wheelAlignmentCheck;
 
-  // Additional notes or observations
   String notes;
 
   MaintenanceLog({
@@ -46,24 +44,25 @@ class MaintenanceLog {
   // Factory method to create a log from JSON data
   factory MaintenanceLog.fromJson(Map<String, dynamic> json) {
     return MaintenanceLog(
-      id: json['id'],
-      vehicleId: json['vehicleId'],
-      date: DateTime.parse(json['date']),
-      technicianName: json['technicianName'],
-      type: json['type'],
-      cost: json['cost'],
-      batteryCheck: json['batteryCheck'] ?? false,
-      brakesCheck: json['brakesCheck'] ?? false,
-      lightsCheck: json['lightsCheck'] ?? false,
-      tireCheck: json['tireCheck'] ?? false,
-      componentCleaning: json['componentCleaning'] ?? false,
-      chainLubrication: json['chainLubrication'] ?? false,
-      boltTightening: json['boltTightening'] ?? false,
-      brakeInspection: json['brakeInspection'] ?? false,
-      batteryHealthCheck: json['batteryHealthCheck'] ?? false,
-      drivetrainCheck: json['drivetrainCheck'] ?? false,
-      wheelAlignmentCheck: json['wheelAlignmentCheck'] ?? false,
-      notes: json['notes'] ?? '',
+      id: json['id'] as String,
+      vehicleId: json['vehicleId'] as String,
+      date:
+          json['date'] != null ? DateTime.parse(json['date']) : DateTime.now(),
+      technicianName: json['technicianName'] as String? ?? '',
+      type: json['type'] as String? ?? 'General',
+      cost: (json['cost'] as num?)?.toDouble() ?? 0.0,
+      batteryCheck: json['batteryCheck'] as bool? ?? false,
+      brakesCheck: json['brakesCheck'] as bool? ?? false,
+      lightsCheck: json['lightsCheck'] as bool? ?? false,
+      tireCheck: json['tireCheck'] as bool? ?? false,
+      componentCleaning: json['componentCleaning'] as bool? ?? false,
+      chainLubrication: json['chainLubrication'] as bool? ?? false,
+      boltTightening: json['boltTightening'] as bool? ?? false,
+      brakeInspection: json['brakeInspection'] as bool? ?? false,
+      batteryHealthCheck: json['batteryHealthCheck'] as bool? ?? false,
+      drivetrainCheck: json['drivetrainCheck'] as bool? ?? false,
+      wheelAlignmentCheck: json['wheelAlignmentCheck'] as bool? ?? false,
+      notes: json['notes'] as String? ?? '',
     );
   }
 

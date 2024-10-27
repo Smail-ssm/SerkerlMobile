@@ -190,6 +190,8 @@ class _UserProfileEditPageState extends State<UserProfileEditPage> {
       creationDate: widget.client!.creationDate,
       referralCode: widget.client!.referralCode,
       password: '',
+      lat:0,
+      lng: 0,
       balance: widget.client!.balance,
       fcmToken: await  getSP("fcmToken"),
       dateOfBirth: widget.client!.dateOfBirth,

@@ -59,7 +59,7 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
-  bool _isExpanded = true; // Track the expanded state of the tile
+   bool _isExpanded = true; // Track the expanded state of the tile
   final Map<MarkerId, MarkerInfo> _markerInfoMap = {};
   final _filterController = StreamController<List<String>>.broadcast();
   List<String> _selectedVehicleTypes = []; // Define the variable here
@@ -71,6 +71,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
   String? _selectedMapStyle; // Selected map style
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   List<Vehicle> _vehicleList = []; // Add this at the class level
+  Timer? _locationUpdateTimer;
 
   Client? client; // User data
   GoogleMapController? _mapController;
@@ -99,6 +100,11 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     _fetchAreas(); // Fetch areas when the widget initializes
     _fetchVehiculs(); // Fetch areas when the widget initializes
     //  _fetchAndRenderParkings(); // Fetch and render parking on map initialization
+// Immediately update location once on initialization
+    _mapService.updateUserLocation(widget.client);
+    _locationUpdateTimer = Timer.periodic(Duration(minutes: 10), (timer) {
+      _mapService.updateUserLocation(widget.client);
+    });
 
     client = widget.client;
     requestPermissions(context); // Request location permissions
@@ -153,6 +159,8 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
   void dispose() {
     _filterController.close();
     WidgetsBinding.instance.removeObserver(this);
+    _locationUpdateTimer?.cancel();
+
     super.dispose();
   }
 
@@ -1551,8 +1559,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     try {
       List<Parking> parkings = await _parkingService.fetchParkings();
 
-      List<Vehicle> vehicles =
-           await _vehicleService.fetchVehicles() ;
+      List<Vehicle> vehicles = await _vehicleService.fetchVehicles();
       _vehicleList = vehicles;
       final filteredVehicles = vehicles.where((vehicle) {
         if (_selectedVehicleTypes.isEmpty) return true; // No filter selected
@@ -2234,5 +2241,8 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
         ),
       );
     });
+  }
+
+  void _updateUserLocation() {
   }
 }

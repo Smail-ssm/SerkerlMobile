@@ -1,9 +1,14 @@
 import 'dart:ui';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:flutter/material.dart';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+
+import '../model/client.dart';
 import '../model/parking.dart';
 import '../model/vehicule.dart';
+import '../util/util.dart';
 import '../widgets/MarkerInfo.dart';
 import 'Vehicleservice.dart';
 import 'parkingService.dart';
@@ -26,12 +31,17 @@ class MapService {
     final textPainter = TextPainter(textDirection: TextDirection.ltr);
     textPainter.text = TextSpan(
       text: String.fromCharCode(icon.codePoint),
-      style: TextStyle(fontSize: iconSize * 0.6, fontFamily: icon.fontFamily, color: Colors.white),
+      style: TextStyle(
+          fontSize: iconSize * 0.6,
+          fontFamily: icon.fontFamily,
+          color: Colors.white),
     );
     textPainter.layout();
     textPainter.paint(canvas, Offset(iconSize / 4, iconSize / 4));
 
-    final image = await pictureRecorder.endRecording().toImage(iconSize.toInt(), iconSize.toInt());
+    final image = await pictureRecorder
+        .endRecording()
+        .toImage(iconSize.toInt(), iconSize.toInt());
     final byteData = await image.toByteData(format: ImageByteFormat.png);
     final bytes = byteData!.buffer.asUint8List();
 
@@ -40,9 +50,11 @@ class MapService {
 
   // Fetch vehicles and parkings, and create markers
   Future<Map<String, dynamic>> fetchAndCreateMarkers(
-      Set<Marker> markers, Map<MarkerId, MarkerInfo> markerInfoMap, List<String> selectedVehicleTypes) async {
-
-    final scooterIcon = await createCustomIcon(Icons.electric_scooter, Colors.blue);
+      Set<Marker> markers,
+      Map<MarkerId, MarkerInfo> markerInfoMap,
+      List<String> selectedVehicleTypes) async {
+    final scooterIcon =
+        await createCustomIcon(Icons.electric_scooter, Colors.blue);
     final ebikeIcon = await createCustomIcon(Icons.pedal_bike, Colors.green);
     final parkingIcon = await createCustomIcon(Icons.local_parking, Colors.red);
 
@@ -54,7 +66,8 @@ class MapService {
 
     // Add parking markers
     for (var parking in parkings) {
-      if (parking.coordinates.latitude == 0.0 || parking.coordinates.longitude == 0.0) {
+      if (parking.coordinates.latitude == 0.0 ||
+          parking.coordinates.longitude == 0.0) {
         continue; // Skip invalid data
       }
 
@@ -62,10 +75,12 @@ class MapService {
       final marker = Marker(
         markerId: markerId,
         icon: parkingIcon,
-        position: LatLng(parking.coordinates.latitude, parking.coordinates.longitude),
+        position:
+            LatLng(parking.coordinates.latitude, parking.coordinates.longitude),
         infoWindow: InfoWindow(
           title: parking.name,
-          snippet: 'Capacity: ${parking.currentCapacity}/${parking.maxCapacity}',
+          snippet:
+              'Capacity: ${parking.currentCapacity}/${parking.maxCapacity}',
         ),
         onTap: () {
           _onMarkerTap(markerId, markerInfoMap);
@@ -87,7 +102,8 @@ class MapService {
     // Filter and add vehicle markers
     final filteredVehicles = vehicles.where((vehicle) {
       if (selectedVehicleTypes.isEmpty) return true;
-      return selectedVehicleTypes.any((type) => vehicle.model.toLowerCase().contains(type.toLowerCase()));
+      return selectedVehicleTypes.any(
+          (type) => vehicle.model.toLowerCase().contains(type.toLowerCase()));
     }).toList();
 
     for (var vehicle in filteredVehicles) {
@@ -96,7 +112,9 @@ class MapService {
       }
 
       final markerId = MarkerId(vehicle.id);
-      final markerIcon = vehicle.model.toLowerCase().contains('scooter') ? scooterIcon : ebikeIcon;
+      final markerIcon = vehicle.model.toLowerCase().contains('scooter')
+          ? scooterIcon
+          : ebikeIcon;
 
       final marker = Marker(
         markerId: markerId,
@@ -127,7 +145,8 @@ class MapService {
   }
 
   // Example onMarkerTap function to handle taps
-  void _onMarkerTap(MarkerId markerId, Map<MarkerId, MarkerInfo> markerInfoMap) {
+  void _onMarkerTap(
+      MarkerId markerId, Map<MarkerId, MarkerInfo> markerInfoMap) {
     final markerInfo = markerInfoMap[markerId];
     if (markerInfo == null) return;
 
@@ -137,6 +156,30 @@ class MapService {
     } else {
       print('Vehicle tapped: ${markerInfo.model}');
       // Show vehicle details logic here
+    }
+  }
+
+  Future<void> updateUserLocation(Client? client) async {
+    if (client?.role.toLowerCase() == 'client') return;
+    final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+    final String env =
+        getFirestoreDocument(); // Get environment (e.g., 'preprod')
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+      await _firestore
+          .collection(env)
+          .doc('users') // This refers to the 'users' collection
+          .collection('users') // This is where individual users' documents are stored
+          .doc(client?.userId)
+          .update({
+        'lat': position.latitude,
+        'lng': position.longitude,
+      });
+      debugPrint(
+          'User location updated: ${position.latitude}, ${position.longitude}');
+    } catch (e) {
+      debugPrint('Error updating location: $e');
     }
   }
 }

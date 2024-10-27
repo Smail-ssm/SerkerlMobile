@@ -1,7 +1,8 @@
 import 'package:easy_localization/easy_localization.dart';
+import 'package:ebike/model/MaintenanceLog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
-
+import 'package:intl/intl.dart';
 import '../model/vehicule.dart';
 import 'tech/MaintenanceLogPage.dart';
 
@@ -16,10 +17,19 @@ class VehicleDetailPage extends StatefulWidget {
 }
 
 class _VehicleDetailPageState extends State<VehicleDetailPage> {
-  bool _isLogExpanded = false;
+  bool _isLogVisible = false;
+  bool _isSearchVisible = false;
+  TextEditingController _searchController = TextEditingController();
+  DateTime? _selectedDate;
+  List<MaintenanceLog> _filteredLogs = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filteredLogs = widget.vehicle.maintenanceLog ?? [];
+  }
 
   Future<void> _addMaintenanceLog() async {
-    // Navigate to MaintenanceLogPage to create a new log and receive it back
     final newLog = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -27,14 +37,13 @@ class _VehicleDetailPageState extends State<VehicleDetailPage> {
       ),
     );
 
-    // Add the returned log to the vehicle's maintenance log list, if available
     if (newLog != null) {
       setState(() {
-        widget.vehicle.maintenanceLog ??= []; // Initialize if null
+        widget.vehicle.maintenanceLog ??= [];
         widget.vehicle.maintenanceLog!.add(newLog);
+        _filteredLogs = widget.vehicle.maintenanceLog!;
       });
 
-      // Show feedback message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Maintenance log added successfully!'.tr())),
       );
@@ -64,30 +73,332 @@ class _VehicleDetailPageState extends State<VehicleDetailPage> {
               isDarkMode: isDarkMode,
             ),
             _buildCard(isDarkMode, [
-              ListTile(
-                leading: const Icon(Icons.battery_full),
-                title: Text('Current Battery Level'.tr()),
-                trailing: Text('${vehicle.battery.level ?? 'N/A'}%'),
-              ),
-              ListTile(
-                leading: const Icon(Icons.date_range),
-                title: Text('Last Maintenance Date'.tr()),
-                trailing: Text(vehicle.nextMaintenanceDate != null
-                    ? DateFormat('yyyy-MM-dd')
-                    .format(vehicle.nextMaintenanceDate!)
-                    : 'N/A'),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Icon(Icons.battery_full, color: Theme.of(context).primaryColor),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Battery Level'.tr(),
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            Text('${vehicle.battery.level ?? 'N/A'}%', style: TextStyle(fontSize: 16)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Icon(Icons.date_range, color: Theme.of(context).primaryColor),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Last Maintenance'.tr(),
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              vehicle.nextMaintenanceDate != null
+                                  ? DateFormat('yyyy-MM-dd').format(vehicle.nextMaintenanceDate!)
+                                  : 'N/A',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ]),
             const SizedBox(height: 10.0),
-
-            // Expandable Maintenance Log Section
-            _buildExpandableLogSection(vehicle),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildSectionHeader(
+                  context,
+                  icon: Icons.history,
+                  title: 'Maintenance Logs'.tr(),
+                  isDarkMode: isDarkMode,
+                ),
+                IconButton(
+                  icon: Icon(_isSearchVisible ? Icons.close : Icons.search),
+                  onPressed: () {
+                    setState(() {
+                      _isSearchVisible = !_isSearchVisible;
+                      if (!_isSearchVisible) {
+                        _searchController.clear();
+                        _selectedDate = null;
+                        _filteredLogs = widget.vehicle.maintenanceLog ?? [];
+                      }
+                    });
+                  },
+                ),
+              ],
+            ),
+            if (_isSearchVisible) _buildSearchBar(),
+            _buildMaintenanceLogSection(vehicle),
           ],
         ),
       ),
     );
   }
 
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10.0),
+      child: Column(
+        children: [
+          TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search logs...'.tr(),
+              prefixIcon: Icon(Icons.search),
+              suffixIcon: IconButton(
+                icon: Icon(Icons.clear),
+                onPressed: () {
+                  _searchController.clear();
+                  _applyFilters();
+                },
+              ),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+            ),
+            onChanged: (value) => _applyFilters(),
+          ),
+          SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  'Filter by Date'.tr(),
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.calendar_today),
+                onPressed: () => _selectDate(),
+              ),
+            ],
+          ),
+          if (_selectedDate != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Selected Date: ${DateFormat('yyyy-MM-dd').format(_selectedDate!)}',
+                    style: TextStyle(fontSize: 14.0),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close),
+                    onPressed: () {
+                      setState(() {
+                        _selectedDate = null;
+                        _applyFilters();
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _applyFilters() {
+    setState(() {
+      _filteredLogs = widget.vehicle.maintenanceLog!.where((log) {
+        final searchMatch = _searchController.text.isEmpty ||
+            log.notes.toLowerCase().contains(_searchController.text.toLowerCase()) ||
+            log.technicianName.toLowerCase().contains(_searchController.text.toLowerCase());
+        final dateMatch = _selectedDate == null ||
+            DateFormat('yyyy-MM-dd').format(log.date) == DateFormat('yyyy-MM-dd').format(_selectedDate!);
+        return searchMatch && dateMatch;
+      }).toList();
+    });
+  }
+
+  Future<void> _selectDate() async {
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+    if (pickedDate != null) {
+      setState(() {
+        _selectedDate = pickedDate;
+        _applyFilters();
+      });
+    }
+  }
+
+  Widget _buildMaintenanceLogSection(Vehicle vehicle) {
+    return Card(
+      color: Theme.of(context).cardColor,
+      elevation: 5.0,
+      shadowColor: Colors.grey.withOpacity(0.5),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          children: [
+            ListTile(
+              title: Text('Maintenance Logs'.tr(), style: TextStyle(fontWeight: FontWeight.bold)),
+              trailing: IconButton(
+                icon: Icon(_isLogVisible ? Icons.expand_less : Icons.expand_more),
+                onPressed: () {
+                  setState(() {
+                    _isLogVisible = !_isLogVisible;
+                  });
+                },
+              ),
+            ),
+            if (_isLogVisible)
+              _filteredLogs.isNotEmpty
+                  ? Column(
+                children: _filteredLogs
+                    .map((log) => GestureDetector(
+                  onTap: () => _showLogDetails(log),
+                  child: Card(
+                    color: Theme.of(context).cardColor.withOpacity(0.95),
+                    margin: const EdgeInsets.symmetric(vertical: 4.0),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: ListTile(
+                      leading: Icon(Icons.info, color: Colors.blueAccent),
+                      title: Text(
+                        '${DateFormat('yyyy-MM-dd').format(log.date)}',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        'Technician: ${log.technicianName}',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                    ),
+                  ),
+                ))
+                    .toList(),
+              )
+                  : Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text('No logs found matching criteria'.tr(), style: TextStyle(fontSize: 14)),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showLogDetails(MaintenanceLog log) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: false,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Maintenance Log Details'.tr(),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                Divider(),
+                SizedBox(height: 8),
+                Text('Date: ${DateFormat('yyyy-MM-dd').format(log.date)}'),
+                Text('Technician: ${log.technicianName}'),
+                Text('Type: ${log.type}'),
+                Text('Cost: ${log.cost.toStringAsFixed(2)}'),
+                SizedBox(height: 16),
+                Text('Notes: ${log.notes}'),
+                SizedBox(height: 20),
+                Text('Maintenance Checks'.tr(), style: TextStyle(fontWeight: FontWeight.bold)),
+                SizedBox(height: 10),
+                ..._buildCheckDetail(log),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  List<Widget> _buildCheckDetail(MaintenanceLog log) {
+    final checks = {
+      'Battery Check': log.batteryCheck,
+      'Brakes Check': log.brakesCheck,
+      'Lights Check': log.lightsCheck,
+      'Tire Check': log.tireCheck,
+      'Component Cleaning': log.componentCleaning,
+      'Chain Lubrication': log.chainLubrication,
+      'Bolt Tightening': log.boltTightening,
+      'Brake Inspection': log.brakeInspection,
+      'Battery Health Check': log.batteryHealthCheck,
+      'Drivetrain Check': log.drivetrainCheck,
+      'Wheel Alignment Check': log.wheelAlignmentCheck,
+    };
+
+    return checks.entries.map((entry) {
+      return ListTile(
+        leading: Icon(
+          entry.value ? Icons.check_circle : Icons.cancel,
+          color: entry.value ? Colors.green : Colors.red,
+        ),
+        title: Text(entry.key.tr()),
+      );
+    }).toList();
+  }
+
+  Widget _buildSectionHeader(BuildContext context,
+      {required IconData icon, required String title, required bool isDarkMode}) {
+    return Row(
+      children: [
+        Icon(icon, color: Theme.of(context).primaryColor),
+        const SizedBox(width: 8.0),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 20.0,
+            fontWeight: FontWeight.bold,
+            color: isDarkMode ? Colors.white : Colors.black,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCard(bool isDarkMode, List<Widget> children) {
+    return Card(
+      color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+      elevation: 4.0,
+      margin: const EdgeInsets.symmetric(vertical: 8.0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(children: children),
+      ),
+    );
+  }
   Widget _buildExpandableFAB(bool isJuicer, Vehicle vehicle) {
     return SpeedDial(
       icon: Icons.menu,
@@ -138,7 +449,7 @@ class _VehicleDetailPageState extends State<VehicleDetailPage> {
         child: const Icon(Icons.event_available, color: Colors.white),
         backgroundColor: Colors.green,
         label: 'Schedule Maintenance'.tr(),
-        onTap: _addMaintenanceLog, // Directly add maintenance log
+        onTap: _addMaintenanceLog,
       ),
       SpeedDialChild(
         child: const Icon(Icons.restart_alt, color: Colors.white),
@@ -153,77 +464,6 @@ class _VehicleDetailPageState extends State<VehicleDetailPage> {
         onTap: () => _reportProblem(vehicle),
       ),
     ];
-  }
-
-  Widget _buildExpandableLogSection(Vehicle vehicle) {
-    return ExpansionPanelList(
-      expandedHeaderPadding: const EdgeInsets.all(0),
-      expansionCallback: (int index, bool isExpanded) {
-        setState(() {
-          _isLogExpanded = !isExpanded;
-        });
-      },
-      children: [
-        ExpansionPanel(
-          headerBuilder: (BuildContext context, bool isExpanded) {
-            return ListTile(
-              leading: const Icon(Icons.history),
-              title: Text('Maintenance Logs'.tr()),
-            );
-          },
-          body: vehicle.maintenanceLog != null &&
-              vehicle.maintenanceLog!.isNotEmpty
-              ? Column(
-            children: vehicle.maintenanceLog!
-                .map((log) => ListTile(
-              title: Text(
-                  '${DateFormat('yyyy-MM-dd').format(log.date)}: ${log.notes}'),
-              subtitle: Text(
-                  'Technician: ${log.technicianName ?? 'Unknown'}'),
-            ))
-                .toList(),
-          )
-              : Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Text('No maintenance logs available'.tr()),
-          ),
-          isExpanded: _isLogExpanded,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSectionHeader(BuildContext context,
-      {required IconData icon,
-        required String title,
-        required bool isDarkMode}) {
-    return Row(
-      children: [
-        Icon(icon, color: Theme.of(context).primaryColor),
-        const SizedBox(width: 8.0),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 20.0,
-            fontWeight: FontWeight.bold,
-            color: isDarkMode ? Colors.white : Colors.black,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCard(bool isDarkMode, List<Widget> children) {
-    return Card(
-      color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-      elevation: 4.0,
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(children: children),
-      ),
-    );
   }
 
   void _markVehicleAsUnavailable(Vehicle vehicle) {
