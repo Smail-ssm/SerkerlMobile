@@ -5,11 +5,11 @@ class RightDrawer extends StatelessWidget {
   final Function() onRefresh;
   final Function() onFilter;
 
-  RightDrawer({
+  const RightDrawer({Key? key, 
     required this.isExpanded,
     required this.onRefresh,
     required this.onFilter,
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -31,14 +31,14 @@ class RightDrawer extends StatelessWidget {
                   children: [
                     Expanded(child: FloatingActionButton.extended(
                       onPressed: onRefresh,
-                      icon: Icon(Icons.refresh),
-                      label: Text('Refresh'),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Refresh'),
                     )),
-                    SizedBox(width: 16.0),
+                    const SizedBox(width: 16.0),
                     Expanded(child: FloatingActionButton.extended(
                       onPressed: onFilter,
-                      icon: Icon(Icons.filter_list),
-                      label: Text('Filter'),
+                      icon: const Icon(Icons.filter_list),
+                      label: const Text('Filter'),
                     )),
                   ],
                 ),

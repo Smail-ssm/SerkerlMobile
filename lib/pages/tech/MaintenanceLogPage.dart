@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 class MaintenanceLogPage extends StatefulWidget {
   final String vehicleId;
 
-  MaintenanceLogPage({required this.vehicleId});
+  const MaintenanceLogPage({Key? key, required this.vehicleId}) : super(key: key);
 
   @override
   _MaintenanceLogPageState createState() => _MaintenanceLogPageState();
@@ -37,7 +37,7 @@ class _MaintenanceLogPageState extends State<MaintenanceLogPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Create Maintenance Log'),
+        title: const Text('Create Maintenance Log'),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
@@ -45,8 +45,8 @@ class _MaintenanceLogPageState extends State<MaintenanceLogPage> {
             _saveMaintenanceLog();
           }
         },
-        label: Text('Save Log'),
-        icon: Icon(Icons.save),
+        label: const Text('Save Log'),
+        icon: const Icon(Icons.save),
         backgroundColor: Theme.of(context).primaryColor,
       ),
       body: SingleChildScrollView(
@@ -56,7 +56,7 @@ class _MaintenanceLogPageState extends State<MaintenanceLogPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 'Log Details',
                 style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
               ),
@@ -79,7 +79,7 @@ class _MaintenanceLogPageState extends State<MaintenanceLogPage> {
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 20.0),
-              Text(
+              const Text(
                 'Maintenance Checks',
                 style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
               ),
@@ -95,11 +95,11 @@ class _MaintenanceLogPageState extends State<MaintenanceLogPage> {
   Widget _buildChecksCard() {
     return Card(
       elevation: 2.0,
-      margin: EdgeInsets.symmetric(vertical: 10.0),
+      margin: const EdgeInsets.symmetric(vertical: 10.0),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8.0),
       ),
-      child: Container(
+      child: SizedBox(
         height: 300, // Limit the height of the Card to make it scrollable
         child: SingleChildScrollView(
           child: Column(
@@ -174,12 +174,12 @@ class _MaintenanceLogPageState extends State<MaintenanceLogPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text("Maintenance Log Saved"),
+          title: const Text("Maintenance Log Saved"),
           content: Text(
               "The maintenance log for vehicle ID ${widget.vehicleId} has been saved successfully."),
           actions: [
             TextButton(
-              child: Text("OK"),
+              child: const Text("OK"),
               onPressed: () => Navigator.of(context).pop(),
             ),
           ],
@@ -193,7 +193,7 @@ class _MaintenanceLogPageState extends State<MaintenanceLogPage> {
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextFormField(
         controller: _dateController,
-        decoration: InputDecoration(
+        decoration: const InputDecoration(
           labelText: 'Date',
           hintText: 'Select date',
           prefixIcon: Icon(Icons.calendar_today),
@@ -236,7 +236,7 @@ class _MaintenanceLogPageState extends State<MaintenanceLogPage> {
         decoration: InputDecoration(
           labelText: label,
           prefixIcon: Icon(icon),
-          border: OutlineInputBorder(),
+          border: const OutlineInputBorder(),
         ),
         keyboardType: keyboardType,
         validator: (value) {

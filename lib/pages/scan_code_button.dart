@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class ScanCodeButton extends StatelessWidget {
   final Function() onPressed;
 
-  ScanCodeButton({required this.onPressed});
+  const ScanCodeButton({Key? key, required this.onPressed}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

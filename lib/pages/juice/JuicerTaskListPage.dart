@@ -1,15 +1,14 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../model/client.dart';
 import '../../services/TaskService.dart';
 import '../../model/task.dart'; // Import Task Model
-import 'package:intl/intl.dart'; // Import for date formatting
+// Import for date formatting
 import 'TaskDetailsPage.dart';
 
 class JuicerTaskListPage extends StatefulWidget {
   final Client client;
 
-  JuicerTaskListPage({required this.client});
+  const JuicerTaskListPage({Key? key, required this.client}) : super(key: key);
 
   @override
   _JuicerTaskListPageState createState() => _JuicerTaskListPageState();

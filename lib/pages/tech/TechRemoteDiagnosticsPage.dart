@@ -8,7 +8,7 @@ class TechRemoteDiagnosticsPage extends StatefulWidget {
   final Client client;
   final List<Vehicle> vehicles;
 
-  TechRemoteDiagnosticsPage({required this.client, required this.vehicles});
+  const TechRemoteDiagnosticsPage({Key? key, required this.client, required this.vehicles}) : super(key: key);
 
   @override
   _TechRemoteDiagnosticsPageState createState() =>
@@ -16,7 +16,7 @@ class TechRemoteDiagnosticsPage extends StatefulWidget {
 }
 
 class _TechRemoteDiagnosticsPageState extends State<TechRemoteDiagnosticsPage> {
-  TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   List<Vehicle> _filteredVehicles = [];
 
   @override
@@ -46,7 +46,7 @@ class _TechRemoteDiagnosticsPageState extends State<TechRemoteDiagnosticsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Vehicle List'),
+        title: const Text('Vehicle List'),
       ),
       body: Column(
         children: [
@@ -56,7 +56,7 @@ class _TechRemoteDiagnosticsPageState extends State<TechRemoteDiagnosticsPage> {
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Search by Vehicle ID',
-                prefixIcon: Icon(Icons.search),
+                prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8.0),
                 ),
@@ -65,7 +65,7 @@ class _TechRemoteDiagnosticsPageState extends State<TechRemoteDiagnosticsPage> {
           ),
           Expanded(
             child: _filteredVehicles.isEmpty
-                ? Center(child: Text('No vehicles available.'))
+                ? const Center(child: Text('No vehicles available.'))
                 : ListView.builder(
                     itemCount: _filteredVehicles.length,
                     itemBuilder: (context, index) {
@@ -97,16 +97,16 @@ class VehicleCard extends StatelessWidget {
   final Vehicle vehicle;
   final VoidCallback onTap;
 
-  VehicleCard({required this.vehicle, required this.onTap});
+  const VehicleCard({Key? key, required this.vehicle, required this.onTap}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: EdgeInsets.all(8.0),
+      margin: const EdgeInsets.all(8.0),
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: EdgeInsets.all(12.0),
+          padding: const EdgeInsets.all(12.0),
           child: Row(
             children: [
               Icon(
@@ -115,28 +115,28 @@ class VehicleCard extends StatelessWidget {
                     : Icons.electric_scooter,
                 size: 48.0,
               ),
-              SizedBox(width: 16.0),
+              const SizedBox(width: 16.0),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       vehicle.model ?? 'Unknown Model',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 18.0,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 8.0),
+                    const SizedBox(height: 8.0),
                     Text('ID: ${vehicle.id}'),
-                    SizedBox(height: 4.0),
+                    const SizedBox(height: 4.0),
                     Text('Battery Level: ${vehicle.battery.level ?? 'N/A'}%'),
                   ],
                 ),
               ),
               vehicle.isAvailable
-                  ? Icon(Icons.check_circle, color: Colors.green)
-                  : Icon(Icons.cancel, color: Colors.red),
+                  ? const Icon(Icons.check_circle, color: Colors.green)
+                  : const Icon(Icons.cancel, color: Colors.red),
             ],
           ),
         ),

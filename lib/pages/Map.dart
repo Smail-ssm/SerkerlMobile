@@ -1,24 +1,15 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:easy_localization/easy_localization.dart';
-import 'package:ebike/pages/FeedbackPage.dart';
-import 'package:ebike/pages/NotificationsList.dart';
-import 'package:ebike/pages/Pricing.dart';
-import 'package:ebike/pages/SessionListPage.dart';
-import 'package:ebike/pages/Settings.dart';
 import 'package:ebike/pages/signin_page.dart';
-import 'package:ebike/pages/tech/TechRemoteDiagnosticsPage.dart';
 import 'package:ebike/services/Vehicleservice.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:ebike/widgets/JuicerOperationsBottomSheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_html/flutter_html.dart' as html;
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../model/area.dart';
@@ -26,26 +17,25 @@ import '../model/client.dart';
 import '../model/parking.dart';
 import '../model/vehicule.dart';
 import '../services/AreaService.dart';
+import '../services/AuthService.dart';
 import '../services/map_service.dart';
 import '../services/parkingService.dart';
-import '../util/Config.dart';
+import '../util/VehicleUtils.dart';
 import '../util/util.dart';
 import '../widgets/CodeInputBottomSheet.dart';
+import '../widgets/CustomGoogleMap.dart';
+import '../widgets/JuicerLeftDrawer.dart';
+import '../widgets/LeftDrawer.dart';
+import '../widgets/MapGuideBottomSheet.dart';
 import '../widgets/MarkerInfo.dart';
+import '../widgets/ParkingImages.dart';
+import '../widgets/PositionedButton.dart';
+import '../widgets/RightDrawer.dart';
+import '../widgets/ScanCodeButton.dart';
+import '../widgets/TechLeftDrawer.dart';
 import '../widgets/bottomWidget.dart';
 import '../widgets/infoBUtton.dart';
 import '../widgets/menuButton.dart';
-import '../widgets/share_bottom_sheet.dart';
-import 'ClientProfilePage.dart';
-import 'History.dart';
-import 'SupportPage.dart';
-import 'juice/BatteryManagementPage.dart';
-import 'juice/JuicerDashboardPage.dart';
-import 'juice/JuicerEarningsPage.dart';
-import 'juice/JuicerTaskListPage.dart';
-import 'juice/JuicerVehicleListPage.dart';
-import 'tech/TechPerformanceMetricsPage .dart';
-import 'tech/TechWorkOrderManagementPage.dart';
 
 class MapPage extends StatefulWidget {
   final Client? client;
@@ -59,17 +49,16 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
-   bool _isExpanded = true; // Track the expanded state of the tile
   final Map<MarkerId, MarkerInfo> _markerInfoMap = {};
   final _filterController = StreamController<List<String>>.broadcast();
   List<String> _selectedVehicleTypes = []; // Define the variable here
   final Set<Marker> _markers = {};
-  Set<Polyline> _polylines = {};
+  final Set<Polyline> _polylines = {};
   final List<MarkerId> _destinationMarkerIds = [];
   final MapService _mapService =
       MapService(ParkingService(), Vehicleservice()); // Initialize the service
+  final AuthService _authService = AuthService();
   String? _selectedMapStyle; // Selected map style
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
   List<Vehicle> _vehicleList = []; // Add this at the class level
   Timer? _locationUpdateTimer;
 
@@ -84,10 +73,10 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
   final ParkingService _parkingService = ParkingService();
   bool isLoadingLocation = true;
   bool isJuicer = false;
-  List<Vehicle> _lowBatteryVehicles = []; // Add this at the class level
   final bool _showMapGuide = false;
 
   late LatLng _destination; // Track loading state
+  final MapType _currentMapType = MapType.normal; // Default map type
 
   @override
   void initState() {
@@ -99,17 +88,23 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     showroledialog();
     _fetchAreas(); // Fetch areas when the widget initializes
     _fetchVehiculs(); // Fetch areas when the widget initializes
-    //  _fetchAndRenderParkings(); // Fetch and render parking on map initialization
-// Immediately update location once on initialization
     _mapService.updateUserLocation(widget.client);
-    _locationUpdateTimer = Timer.periodic(Duration(minutes: 10), (timer) {
+    _locationUpdateTimer = Timer.periodic(const Duration(minutes: 10), (timer) {
       _mapService.updateUserLocation(widget.client);
     });
 
     client = widget.client;
     requestPermissions(context); // Request location permissions
     _filterController.stream.listen((selectedVehicleTypes) {
-      _applyFilters(selectedVehicleTypes);
+      VehicleUtils.applyFilters(
+        selectedVehicleTypes: selectedVehicleTypes,
+        updateVehicleTypes: (types) {
+          setState(() {
+            _selectedVehicleTypes = types; // Update filter criteria in state
+          });
+        },
+        fetchVehicles: _fetchVehiculs,
+      );
     });
   }
 
@@ -125,30 +120,39 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
 
   void _applyMapTheme() async {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    String style;
 
-    // Load the appropriate style based on system theme
-    if (isDarkMode) {
-      style = await rootBundle.loadString('assets/mapStyles/dark.json');
-    } else {
-      style = await rootBundle.loadString('assets/mapStyles/standard.json');
-    }
+    // Load the appropriate style based on system theme using a ternary operator
+    final mapStyleJson = isDarkMode
+        ? await rootBundle.loadString('assets/mapStyles/dark.json')
+        : await rootBundle.loadString('assets/mapStyles/standard.json');
 
     // Apply the selected map style (dark or standard)
-    _mapController?.setMapStyle(style);
+    _mapController?.setMapStyle(mapStyleJson);
   }
+
+  static const String defaultMapStyleName = 'default';
 
   Future<void> _loadMapStyle() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? mapStyleKey = prefs.getString('mapStyle') ?? 'default';
+    String? mapStyleName = prefs.getString('mapStyle') ?? defaultMapStyleName;
 
-    if (mapStyleKey != 'default') {
+    if (mapStyleName == defaultMapStyleName) {
+      setState(() {
+        _selectedMapStyle = null;
+      });
+      return;
+    }
+
+    try {
       String mapStyleJson =
-          await rootBundle.loadString('assets/mapStyles/$mapStyleKey.json');
+          await rootBundle.loadString('assets/mapStyles/$mapStyleName.json');
       setState(() {
         _selectedMapStyle = mapStyleJson;
       });
-    } else {
+    } catch (e) {
+      // Handle error, e.g., log it or show a message to the user
+      print('Error loading map style: $e');
+      // Optionally, set a default style or show an error message
       setState(() {
         _selectedMapStyle = null;
       });
@@ -164,88 +168,32 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  MapType _currentMapType = MapType.normal; // Default map type
-
-  void _showMapTypeDialog() {
+  void _showMapThemeDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Select Map  Theme'),
+          title: const Text('Select Map Theme'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              // const Text('Map Type'),
-              // ListTile(
-              //   title: const Text('Normal'),
-              //   onTap: () {
-              //     _changeMapType(MapType.normal);
-              //     Navigator.of(context).pop();
-              //   },
-              // ),
-              // ListTile(
-              //   title: const Text('Satellite'),
-              //   onTap: () {
-              //     _changeMapType(MapType.satellite);
-              //     Navigator.of(context).pop();
-              //   },
-              // ),
-              // ListTile(
-              //   title: const Text('Terrain'),
-              //   onTap: () {
-              //     _changeMapType(MapType.terrain);
-              //     Navigator.of(context).pop();
-              //   },
-              // ),
-              // ListTile(
-              //   title: const Text('Hybrid'),
-              //   onTap: () {
-              //     _changeMapType(MapType.hybrid);
-              //     Navigator.of(context).pop();
-              //   },
-              // ),
-              // const Divider(),
-              ListTile(
-                title: const Text('Standard'),
-                onTap: () {
-                  _changeMapTheme('standard'); // Change to standard theme
-                  Navigator.of(context).pop();
-                },
-              ),
-              ListTile(
-                title: const Text('Aubergine'),
-                onTap: () {
-                  _changeMapTheme('aubergine'); // Change to aubergine theme
-                  Navigator.of(context).pop();
-                },
-              ),
-              ListTile(
-                title: const Text('Dark'),
-                onTap: () {
-                  _changeMapTheme('dark'); // Change to dark theme
-                  Navigator.of(context).pop();
-                },
-              ),
-              ListTile(
-                title: const Text('Night'),
-                onTap: () {
-                  _changeMapTheme('night'); // Change to night theme
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
+            children: _buildThemeTiles(),
           ),
         );
       },
     );
   }
 
-  void _moveCameraToCurrentLocation() {
-    if (_mapController != null && currentLocation != null) {
-      _mapController!.animateCamera(
-        CameraUpdate.newLatLngZoom(currentLocation!, 15.0),
+  List<Widget> _buildThemeTiles() {
+    const List<String> themes = ['standard', 'aubergine', 'dark', 'night'];
+    return themes.map((theme) {
+      return ListTile(
+        title: Text(theme), // Capitalize the first letter
+        onTap: () {
+          _changeMapTheme(theme);
+          Navigator.of(context).pop();
+        },
       );
-    }
+    }).toList();
   }
 
   @override
@@ -253,19 +201,104 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     return Scaffold(
       key: scaffoldKey,
       drawer: _getDrawerForRole(client!),
-      endDrawer: _buildRightDrawer(),
+      endDrawer: RightDrawer(
+        isExpanded: true, // or false based on the initial state you want
+        onRefresh: () {
+          _initializeLocation();
+          _fetchAreas(); // Fetch areas when the widget initializes
+          _fetchVehiculs(); // Fetch areas when the widget initializes
+        },
+        onFilter: () async {
+          final selectedVehicleTypes = await showModalBottomSheet<List<String>>(
+            context: context,
+            isScrollControlled: true,
+            builder: (BuildContext context) {
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0, vertical: 24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Vehicle types',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24.0),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildVehicleTypeButton(
+                            context, Icons.pedal_bike, 'ebike'),
+                        _buildVehicleTypeButton(
+                            context, Icons.electric_scooter, 'scooter'),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+
+          if (selectedVehicleTypes != null) {
+            _filterController.sink.add(selectedVehicleTypes); // Add to stream
+          }
+        },
+      ),
       body: Stack(
         children: [
           if (currentLocation != null)
-            _buildGoogleMap()
+            CustomGoogleMap(
+              onMapCreated: (controller) {
+                _mapController = controller;
+              },
+              currentLocation: currentLocation,
+              markers: _markers,
+              polygons: polygons,
+              polylines: _polylines,
+              mapType: _currentMapType,
+              applyMapTheme: _applyMapTheme,
+              onLongPress: _onLongPress,
+            )
           else
             const Center(child: CircularProgressIndicator()),
           menuButton(scaffoldKey: scaffoldKey),
           InfoButton(scaffoldKey: scaffoldKey),
-          if (currentLocation != null) _buildCurrentLocationButton(),
+          if (currentLocation != null)
+            PositionedButton(
+              icon: Icons.my_location,
+              bottom: 60,
+              right: 20,
+              tooltipMessage: 'Current Location',
+              onPressed: _initializeLocation,
+            ),
           if (currentLocation != null) _buildMapGuidButton(),
-          if (currentLocation != null) _buildScanCodeButton(client!),
-          if (currentLocation != null) _buildMapStyleButton(),
+          if (currentLocation != null)
+            ScanCodeButton(
+              client: widget.client,
+              context: context,
+              getMissingFields: _getMissingFields,
+              showMissingInfoDialog: _showMissingInfoDialog,
+              buildJuicerOperationsBottomSheet: () =>
+                  const JuicerOperationsBottomSheet(),
+            ),
+          if (currentLocation != null)
+            PositionedButton(
+              icon: Icons.layers_outlined,
+              bottom: 120,
+              left: 20,
+              tooltipMessage: 'Change Map Style',
+              onPressed: _showMapThemeDialog,
+            ),
           if (isLoadingLocation)
             const Center(
               child: CircularProgressIndicator(),
@@ -278,400 +311,29 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
   Widget _getDrawerForRole(Client client) {
     switch (client.role.toLowerCase()) {
       case 'juicer':
-        return _buildJuicerLeftDrawer(client);
+        return JuicerLeftDrawer(
+          client: client,
+          onLogout: () async {
+            await onLogout(context); // Wrap the async call
+          },
+          vehicles: _vehicleList,
+        );
       case 'tech':
-        return _buildTechLeftDrawer(client);
+        return TechLeftDrawer(
+          client: client,
+          onLogout: () async {
+            await onLogout(context); // Wrap the async call
+          },
+          vehicles: _vehicleList,
+        );
       default:
-        return _buildLeftDrawer(client);
+        return LeftDrawer(
+          client: client,
+          onLogout: () async {
+            await onLogout(context); // Wrap the async call
+          },
+        );
     }
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 16.0,
-          fontWeight: FontWeight.bold,
-          color: Colors.grey[700],
-        ),
-      ),
-    );
-  }
-
-  Drawer _buildLeftDrawer(Client client) {
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero, // Remove default padding
-        children: [
-          buildUserAccountsDrawerHeader(context),
-
-          // Account Section
-          _buildSectionHeader('Account'),
-          buildListTile(
-            'Balance',
-            Icons.account_balance,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) =>
-                        BalanceAndPricingPage(client: client)),
-              );
-            },
-            value: client.balance.toString(),
-          ),
-          buildListTile(
-            'Profile',
-            Icons.person,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => ClientProfilePage(client: client)),
-              );
-            },
-          ),
-          buildListTile(
-            'Share',
-            Icons.share,
-            () {
-              showShareBottomSheet(context, client.userId);
-            },
-          ),
-
-          const Divider(),
-          // Visual separator
-
-          // Activities Section
-          _buildSectionHeader('Activities'),
-          buildListTile(
-            'Ride History',
-            Icons.history,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => HistoryPage(client: client)),
-              );
-            },
-          ),
-          buildListTile(
-            'Notifications',
-            Icons.notifications,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => NotificationsPage(client: client)),
-              );
-            },
-          ),
-
-          const Divider(),
-          // Visual separator
-
-          // Support Section
-          _buildSectionHeader('Support'),
-          buildListTile(
-            'Support',
-            Icons.support,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => SupportPage(client: client)),
-              );
-            },
-          ),
-          buildListTile(
-            'Feedback',
-            Icons.feedback,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const FeedbackPage()),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Drawer _buildJuicerLeftDrawer(Client client) {
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          buildUserAccountsDrawerHeader(context),
-
-          // Dashboard Section
-          _buildSectionHeader('Dashboard'),
-          buildListTile(
-            'Dashboard Home',
-            Icons.dashboard,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => JuicerDashboardPage(client: client)),
-              );
-            },
-          ),
-
-          const Divider(),
-
-          // Management Section
-          _buildSectionHeader('Management'),
-          buildListTile(
-            'Vehicle List',
-            Icons.directions_car,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => JuicerVehicleListPage(
-                        client: client, vehicles: _vehicleList)),
-              );
-            },
-          ),
-          buildListTile(
-            'Task List',
-            Icons.list_alt,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => JuicerTaskListPage(client: client)),
-              );
-            },
-          ),
-          buildListTile(
-            'Battery Management',
-            Icons.battery_full,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const BatteryManagementPage()),
-              );
-            },
-          ),
-          buildListTile(
-            'Communication',
-            Icons.message,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => SessionListPage(client: client)),
-              );
-            },
-          ),
-
-          const Divider(),
-
-          // Earnings Section
-          _buildSectionHeader('Earnings'),
-          buildListTile(
-            'Earnings',
-            Icons.attach_money,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => JuicerEarningsPage(client: client)),
-              );
-            },
-          ),
-
-          const Divider(),
-
-          // Account Section
-          _buildSectionHeader('Account'),
-          buildListTile(
-            'Notifications',
-            Icons.notifications,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => NotificationsPage(client: client)),
-              );
-            },
-          ),
-          buildListTile(
-            'Support',
-            Icons.support_agent,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => SupportPage(client: client)),
-              );
-            },
-          ),
-          buildListTile(
-            'Profile',
-            Icons.person,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => ClientProfilePage(client: client)),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Drawer _buildTechLeftDrawer(Client client) {
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          buildUserAccountsDrawerHeader(context),
-
-          // Work Section
-          _buildSectionHeader('Work'),
-          buildListTile(
-            'Work Order Management',
-            Icons.assignment,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) =>
-                        TechWorkOrderManagementPage(client: client)),
-              );
-            },
-          ),
-          buildListTile(
-            'Remote Diagnostics',
-            Icons.phonelink_setup,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => TechRemoteDiagnosticsPage(
-                        client: client, vehicles: _vehicleList)),
-              );
-            },
-          ),
-
-          const Divider(),
-
-          // Monitoring Section
-          _buildSectionHeader('Monitoring'),
-          buildListTile(
-            'Performance Metrics',
-            Icons.bar_chart,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) =>
-                        TechPerformanceMetricsPage(client: client)),
-              );
-            },
-          ),
-
-          const Divider(),
-
-          // Account Section
-          _buildSectionHeader('Account'),
-          buildListTile(
-            'Balance',
-            Icons.account_balance,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) =>
-                        BalanceAndPricingPage(client: client)),
-              );
-            },
-            value: client.balance.toString(),
-          ),
-          buildListTile(
-            'Ride History',
-            Icons.history,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => HistoryPage(client: client)),
-              );
-            },
-          ),
-          buildListTile(
-            'Notifications',
-            Icons.notifications,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => NotificationsPage(client: client)),
-              );
-            },
-          ),
-          buildListTile(
-            'Support',
-            Icons.support_agent,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => SupportPage(client: client)),
-              );
-            },
-          ),
-          buildListTile(
-            'Profile',
-            Icons.person,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => ClientProfilePage(client: client)),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGoogleMap() {
-    if (currentLocation == null) {
-      return Container(); // Or any placeholder widget
-    }
-    return GoogleMap(
-      mapType: _currentMapType,
-      initialCameraPosition: CameraPosition(
-        target: currentLocation!,
-        zoom: 15.0,
-      ),
-      onMapCreated: (GoogleMapController controller) {
-        _mapController = controller;
-        _applyMapTheme(); // Apply map theme based on system theme
-      },
-      polygons: polygons,
-      markers: _markers,
-      polylines: _polylines,
-      // Display the route polyline
-      myLocationEnabled: true,
-      myLocationButtonEnabled: false,
-      // No my location button
-      zoomControlsEnabled: false,
-      onLongPress: _onLongPress,
-      // Handle long press to set destination
-      mapToolbarEnabled: false,
-    );
   }
 
   void _onLongPress(LatLng position) async {
@@ -710,7 +372,6 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
         isAvailable: false,
         vehicle: null,
         isParking: false,
-
         isDestination: true,
       );
 
@@ -721,7 +382,33 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
       _destination = position;
     });
 
-    _drawRoute(currentLocation!, position, markerId);
+    // Call the drawRoute function from the MapService instance
+    final routeData = await _mapService.fetchRouteDetails(
+      currentLocation!,
+      position,
+      context.locale.languageCode,
+    );
+
+    if (routeData != null) {
+      _mapService.addPolyline(routeData['points'], _polylines, setState);
+
+      // Update the MarkerInfo for the selected destination
+      setState(() {
+        if (_markerInfoMap.containsKey(markerId)) {
+          _markerInfoMap[markerId] = MarkerInfo(
+            id: _markerInfoMap[markerId]!.id,
+            model: _markerInfoMap[markerId]!.model,
+            isAvailable: _markerInfoMap[markerId]!.isAvailable,
+            vehicle: _markerInfoMap[markerId]!.vehicle,
+            isParking: false,
+            isDestination: true,
+            distance: routeData['distance'],
+            duration: routeData['duration'],
+            steps: routeData['steps'],
+          );
+        }
+      });
+    }
   }
 
   void _removeMarker(String markerId) {
@@ -759,15 +446,38 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
       showModalBottomSheet(
         context: context,
         builder: (context) => VehicleBottomSheet(
-          context: context,
-          markerInfo: markerInfo,
-          // Pass vehicle marker information
-          currentLocation: currentLocation,
-          // Pass current location
-          drawRoute: (LatLng origin, LatLng destination, MarkerId markerId) {
-            _drawRoute(
-                origin, destination, markerId); // Implement route drawing
+          markerInfo: markerInfo, // Pass vehicle marker information
+          currentLocation: currentLocation, // Pass current location
+          drawRoute:
+              (LatLng origin, LatLng destination, MarkerId markerId) async {
+            final routeData = await _mapService.fetchRouteDetails(
+              origin,
+              destination,
+              context.locale.languageCode,
+            );
+
+            if (routeData != null) {
+              _mapService.addPolyline(
+                  routeData['points'], _polylines, setState);
+
+              setState(() {
+                if (_markerInfoMap.containsKey(markerId)) {
+                  _markerInfoMap[markerId] = MarkerInfo(
+                    id: _markerInfoMap[markerId]!.id,
+                    model: _markerInfoMap[markerId]!.model,
+                    isAvailable: _markerInfoMap[markerId]!.isAvailable,
+                    vehicle: _markerInfoMap[markerId]!.vehicle,
+                    isParking: false,
+                    isDestination: true,
+                    distance: routeData['distance'],
+                    duration: routeData['duration'],
+                    steps: routeData['steps'],
+                  );
+                }
+              });
+            }
           },
+          context: context,
         ),
       );
     }
@@ -844,7 +554,11 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
                     ),
                     const SizedBox(height: 16),
                     // Parking Pictures (if available)
-                    _buildParkingImages(parking),
+                    ParkingImages(
+                      parking: parking,
+                      showImagePreview: _showImagePreview,
+                      defaultImageUrl: defaultImageUrl,
+                    ),
                     const SizedBox(height: 16),
                     // Close Button
                     Align(
@@ -870,72 +584,6 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildParkingImages(Parking parking) {
-    if (parking.images.isEmpty) {
-      return const Text('No images available.');
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Photos',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          height: 200,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: parking.images.length,
-            itemBuilder: (context, index) {
-              final imageUrl = parking.images[index];
-
-              return GestureDetector(
-                onTap: () => _showImagePreview(context, imageUrl),
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      imageUrl.isNotEmpty ? imageUrl : _defaultImageUrl(),
-                      width: 300,
-                      height: 200,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          width: 300,
-                          height: 200,
-                          color: Colors.grey[300],
-                          child: const Icon(Icons.broken_image,
-                              size: 50, color: Colors.grey),
-                        );
-                      },
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) {
-                          return child;
-                        } else {
-                          return Center(
-                            child: CircularProgressIndicator(
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded /
-                                      (loadingProgress.expectedTotalBytes!)
-                                  : null,
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
   void _showImagePreview(BuildContext context, String imageUrl) {
     showDialog(
       context: context,
@@ -952,10 +600,6 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
         ),
       ),
     );
-  }
-
-  String _defaultImageUrl() {
-    return 'https://placehold.co/300x200?text=No+Image'; // Default image placeholder
   }
 
   void _showDestinationDetails(MarkerInfo markerInfo) {
@@ -1050,103 +694,6 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildRefreshButton() {
-    return Builder(
-      builder: (BuildContext context) {
-        final buttonColor = Theme.of(context).colorScheme.primary;
-        final iconColor = Theme.of(context).colorScheme.onPrimary;
-
-        return FloatingActionButton.extended(
-          onPressed: () {
-            _initializeLocation();
-            _fetchAreas(); // Fetch areas when the widget initializes
-            _fetchVehiculs(); // Fetch areas when the widget initializes
-            //  _fetchAndRenderParkings(); // Fetch and render parking on map initialization
-          },
-          backgroundColor: buttonColor,
-          // Adaptable to light and dark mode
-          icon: Icon(
-            Icons.refresh, color: iconColor, // Adaptable to button background
-          ),
-          label: Text(
-            'Refresh',
-            style: TextStyle(
-                color: iconColor), // Text color adaptable to button background
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildFilterButton() {
-    return Builder(
-      builder: (BuildContext context) {
-        final buttonColor = Theme.of(context).colorScheme.primary;
-        final iconColor = Theme.of(context).colorScheme.onPrimary;
-
-        return FloatingActionButton.extended(
-          onPressed: () async {
-            final selectedVehicleTypes =
-                await showModalBottomSheet<List<String>>(
-              context: context,
-              isScrollControlled: true,
-              builder: (BuildContext context) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0, vertical: 24.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Vehicle types',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          IconButton(
-                            onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.close),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24.0),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildVehicleTypeButton(
-                              context, Icons.pedal_bike, 'ebike'),
-                          _buildVehicleTypeButton(
-                              context, Icons.electric_scooter, 'scooter'),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-
-            if (selectedVehicleTypes != null) {
-              _filterController.sink.add(selectedVehicleTypes); // Add to stream
-            }
-          },
-          backgroundColor: buttonColor,
-          // Adaptable to light and dark mode
-          icon: Icon(
-            Icons.filter_list,
-            color: iconColor, // Adaptable to button background
-          ),
-          label: Text(
-            'Filter',
-            style: TextStyle(
-                color: iconColor), // Text color adaptable to button background
-          ),
-        );
-      },
-    );
-  }
-
   Widget _buildVehicleTypeButton(
       BuildContext context, IconData icon, String label) {
     return Builder(
@@ -1202,40 +749,6 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     );
   }
 
-  void _applyFilters(List<String> selectedVehicleTypes) {
-    setState(() {
-      _selectedVehicleTypes = selectedVehicleTypes; // Update filter criteria
-      _fetchVehiculs(); // Refetch vehicles with new filters
-    });
-  }
-
-  Widget _buildCurrentLocationButton() {
-    return Positioned(
-      bottom: 80, // Adjusted above the Scan button
-      right: 20, // Positioned close to the right edge
-      child: Tooltip(
-        message: 'Current Location',
-        child: RawMaterialButton(
-          onPressed: _initializeLocation,
-          fillColor: Theme.of(context).colorScheme.primary,
-          // Use theme-based color
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8.0),
-          ),
-          constraints: const BoxConstraints.tightFor(
-            width: 40.0,
-            height: 40.0,
-          ),
-          child: Icon(
-            Icons.my_location,
-            size: 24.0,
-            color: Theme.of(context).colorScheme.onPrimary,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildMapGuidButton() {
     return Positioned(
       bottom: 140,
@@ -1245,7 +758,14 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
         message: _showMapGuide ? 'Close Map Guide' : 'Open Map Guide',
         child: RawMaterialButton(
           onPressed: () {
-            _showMapGuideBottomSheet(context);
+            showModalBottomSheet(
+              context: context,
+              backgroundColor: Colors.transparent,
+              isScrollControlled: true,
+              builder: (BuildContext context) {
+                return const MapGuideBottomSheet();
+              },
+            );
           },
           fillColor: Theme.of(context).colorScheme.primary,
           shape: RoundedRectangleBorder(
@@ -1270,7 +790,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
         (client.balance > 0 || client.role.toLowerCase() == 'juicer')
             ? Colors.red
             : Colors.grey; // Red if balance > 0 or role is juicer, grey if not
-    final iconColor = Colors.white; // White text color for the Scan button
+    const iconColor = Colors.white; // White text color for the Scan button
 
     return Positioned(
       bottom: 20,
@@ -1297,7 +817,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
                           context: context,
                           builder: (BuildContext context) {
                             if (client.role.toLowerCase() == 'juicer') {
-                              return _buildJuicerOperationsBottomSheet(); // Custom bottom sheet for Juicer operations
+                              return const JuicerOperationsBottomSheet(); // Custom bottom sheet for Juicer operations
                             } else {
                               return const CodeInputBottomSheet(); // Custom bottom sheet widget for clients
                             }
@@ -1317,7 +837,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
             width: double.infinity, // Full width button
             height: 60.0, // Larger height for better accessibility
           ),
-          child: Text(
+          child: const Text(
             'Scan', // Display "Scan" on the button
             style: TextStyle(
               fontSize: 18.0, // Increase text size for better readability
@@ -1341,62 +861,6 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
   }
 
 // Custom bottom sheet for Juicer operations
-  Widget _buildJuicerOperationsBottomSheet() {
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: Theme.of(context).canvasColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Juicer Operations',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 16),
-          ListTile(
-            leading: const Icon(Icons.report_problem),
-            title: const Text('Report a Problem'),
-            onTap: () {
-              // Handle reporting a problem
-              Navigator.pop(context);
-              // Add your problem reporting logic here
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.lock_open),
-            title: const Text('Unlock Vehicle to Change Battery'),
-            onTap: () {
-              // Handle unlocking vehicle
-              Navigator.pop(context);
-              // Add your unlocking logic here
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.battery_charging_full),
-            title: const Text('Check Battery Level'),
-            onTap: () {
-              // Handle checking battery level
-              Navigator.pop(context);
-              // Add your battery level checking logic here
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.military_tech),
-            title: const Text('Perform Maintenance'),
-            onTap: () {
-              // Handle maintenance operation
-              Navigator.pop(context);
-              // Add your maintenance logic here
-            },
-          ),
-        ],
-      ),
-    );
-  }
 
 // Dialog to show missing info
   void _showMissingInfoDialog(List<String> missingFields) {
@@ -1427,7 +891,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
       child: Tooltip(
         message: 'Change Map Style', // Tooltip message
         child: RawMaterialButton(
-          onPressed: _showMapTypeDialog,
+          onPressed: _showMapThemeDialog,
           fillColor: Theme.of(context).colorScheme.primary,
           // Use theme-based color
           shape: RoundedRectangleBorder(
@@ -1447,40 +911,6 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     );
   }
 
-  Future<void> _fetchMarkers() async {
-    setState(() {
-      isLoading = true;
-    });
-
-    try {
-      // Call the service with _selectedVehicleTypes passed as the filter
-      final result = await _mapService.fetchAndCreateMarkers(
-        _markers, _markerInfoMap,
-        _selectedVehicleTypes, // Pass the selected vehicle types
-      );
-
-      setState(() {
-        _markers.clear();
-        _markers.addAll(result['markers']);
-        _markerInfoMap.clear();
-        _markerInfoMap.addAll(result['markerInfoMap']);
-        isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
-      Fluttertoast.showToast(
-          msg: 'Error fetching markers: $e',
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.black,
-          textColor: Colors.white,
-          fontSize: 16.0);
-    }
-  }
-
   Future<void> _initializeLocation() async {
     setState(() {
       isLoadingLocation = true; // Start showing loading spinner
@@ -1491,16 +921,14 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
         currentLocation = LatLng(position.latitude, position.longitude);
         isLoadingLocation = false; // Location fetched successfully
       });
-      _moveCameraToCurrentLocation();
+      if (_mapController != null && currentLocation != null) {
+        _mapController!.animateCamera(
+          CameraUpdate.newLatLngZoom(currentLocation!, 15.0),
+        );
+      }
     } catch (e) {
-      Fluttertoast.showToast(
-        msg: 'Error fetching location: $e',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        backgroundColor: Colors.black,
-        textColor: Colors.white,
-        fontSize: 16.0,
-      );
+      showToast('An unexpected error occurred: $e');
+
       setState(() {
         isLoadingLocation = false; // Stop loading even if location fetch failed
         // Optionally, set a default location or handle accordingly
@@ -1515,35 +943,9 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
         polygons = areas.map((area) => area.polygon).toSet();
       });
     } catch (e) {
-      Fluttertoast.showToast(
-          msg: 'Error fetching areas: $e',
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.black,
-          textColor: Colors.white,
-          fontSize: 16.0);
+      showToast('An unexpected error occurred: $e');
+      // Log the error for debugging
     }
-  }
-
-  Future<void> showroledialog() async {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("ROle"),
-          content: Text("ROle :\n\n" + widget.client!.role),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text("OK"),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   Future<void> _fetchVehiculs() async {
@@ -1657,104 +1059,19 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     }
   }
 
-  void _changeMapType(MapType mapType) {
-    setState(() {
-      _currentMapType = mapType;
-    });
-    Navigator.of(context).pop(); // Close the dialog
-  }
-
-  void _changeMapTheme(String theme) async {
-    String style;
-    switch (theme) {
-      case 'aubergine':
-        style = await rootBundle.loadString('assets/mapStyles/aubergine.json');
-        break;
-      case 'dark':
-        style = await rootBundle.loadString('assets/mapStyles/dark.json');
-        break;
-      case 'night':
-        style = await rootBundle.loadString('assets/mapStyles/night.json');
-        break;
-      case 'standard':
-      default:
-        style = await rootBundle.loadString('assets/mapStyles/standard.json');
-        break;
-    }
-
-    // Apply the selected map theme (style)
-    _mapController?.setMapStyle(style);
-  }
-
-  void _showMapGuideBottomSheet(BuildContext context) {
-    showModalBottomSheet(
+  Future<void> showroledialog() async {
+    showDialog(
       context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (BuildContext context) {
-        final theme = Theme.of(context);
-        final backgroundColor = theme.colorScheme.background;
-        final surfaceColor = theme.colorScheme.surface;
-        final dividerColor = theme.dividerColor;
-
-        return Wrap(
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: surfaceColor, // Adaptable to light and dark mode
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(16)),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        margin: const EdgeInsets.only(bottom: 16),
-                        decoration: BoxDecoration(
-                          color: dividerColor, // Color for the drag handle
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    _buildItem(
-                      Icons.stop_circle,
-                      'No-go zone',
-                      'Don\'t ride or park in red areas. We\'ll stop your vehicle and you risk a fine.',
-                      Colors.red,
-                    ),
-                    _buildItem(
-                      Icons.speed_sharp,
-                      'Low-speed zone',
-                      'We\'ll automatically slow your speed in yellow areas.',
-                      Colors.yellow,
-                    ),
-                    _buildItem(
-                      Icons.local_parking,
-                      'No-park zone',
-                      'To avoid a parking fine, end your ride outside of gray areas.',
-                      Colors.grey,
-                    ),
-                    _buildItem(
-                      Icons.electric_scooter,
-                      'Scooter parking',
-                      'Park scooters in circle spots, or diamond for all vehicles in blue areas.',
-                      Colors.blue,
-                    ),
-                    _buildItem(
-                      Icons.pedal_bike,
-                      'Bike parking',
-                      'Park bikes in square spots, or diamond for all vehicles in blue areas.',
-                      Colors.blue,
-                    ),
-                  ],
-                ),
-              ),
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("ROle"),
+          content: Text("ROle :\n\n" + widget.client!.role),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("OK"),
             ),
           ],
         );
@@ -1762,113 +1079,25 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildItem(
-      IconData icon, String title, String description, Color color) {
-    final theme = Theme.of(context);
-    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
-    final subtitleColor = theme.textTheme.bodyMedium?.color ?? Colors.grey;
+  void _changeMapTheme(String theme) async {
+    const mapStyles = {
+      'aubergine': 'assets/mapStyles/aubergine.json',
+      'dark': 'assets/mapStyles/dark.json',
+      'night': 'assets/mapStyles/night.json',
+      'standard': 'assets/mapStyles/standard.json',
+    };
 
-    return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text(
-        title,
-        style: TextStyle(color: textColor), // Adaptable to light and dark mode
-      ),
-      subtitle: Text(
-        description,
-        style:
-            TextStyle(color: subtitleColor), // Adaptable to light and dark mode
-      ),
-      contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
-    );
+    final stylePath = mapStyles[theme] ?? mapStyles['standard'];
+
+    try {
+      final style = await rootBundle.loadString(stylePath!);
+      _mapController?.setMapStyle(style);
+    } catch (e) {
+      print('Error loading map style: $e');
+    }
   }
 
-  Widget buildUserAccountsDrawerHeader(BuildContext context) {
-    // Determine if the current theme is dark or light
-    bool isDarkTheme = Theme.of(context).brightness == Brightness.dark;
-
-    // Set text color based on the theme
-    Color textColor = isDarkTheme ? Colors.white : Colors.black;
-
-    // Set the gradient colors based on the theme
-    List<Color> gradientColors = isDarkTheme
-        ? [
-            const Color(0xFF1A237E),
-            const Color(0xFF0D47A1)
-          ] // Dark theme gradient colors
-        : [Colors.blue, Colors.green]; // Light theme gradient colors
-
-    // Set the icon colors based on the theme
-    Color iconColor = isDarkTheme ? Colors.white : Colors.black;
-
-    return UserAccountsDrawerHeader(
-      accountName: Text(
-        client?.fullName ?? 'Guest',
-        style: TextStyle(color: textColor),
-      ),
-      accountEmail: Text(
-        client?.email ?? 'No email',
-        style: TextStyle(color: textColor),
-      ),
-      currentAccountPicture: GestureDetector(
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ClientProfilePage(
-              client: client,
-            ),
-          ),
-        ),
-        child: CircleAvatar(
-          backgroundColor: Colors.grey,
-          child: client?.profilePictureUrl != null &&
-                  client!.profilePictureUrl.isNotEmpty
-              ? ClipOval(
-                  child: Image.network(
-                    client!.profilePictureUrl,
-                    fit: BoxFit.cover,
-                    width: 90.0,
-                    height: 90.0,
-                    errorBuilder: (context, error, stackTrace) => Icon(
-                      Icons.person,
-                      size: 50.0,
-                      color: iconColor,
-                    ),
-                  ),
-                )
-              : Icon(
-                  Icons.person,
-                  size: 50.0,
-                  color: iconColor,
-                ),
-        ),
-      ),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: gradientColors,
-        ),
-      ),
-      otherAccountsPictures: [
-        GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const SettingsPage()),
-            );
-          }, // Call the logout function when tapped
-          child: CircleAvatar(child: Icon(Icons.settings, color: iconColor)),
-        ),
-        GestureDetector(
-          onTap: onLogout, // Call the logout function when tapped
-          child: CircleAvatar(child: Icon(Icons.logout, color: iconColor)),
-        ),
-      ],
-    );
-  }
-
-  Future<void> onLogout() async {
+  Future<void> onLogout(BuildContext context) async {
     bool confirmLogout = await showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1878,16 +1107,13 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
           actions: [
             TextButton(
               onPressed: () {
-                GoogleSignIn().signOut();
-                Navigator.of(context)
-                    .pop(false); // Return false to indicate cancel
+                Navigator.of(context).pop(false); // Cancel logout
               },
               child: const Text("Cancel"),
             ),
             TextButton(
               onPressed: () {
-                Navigator.of(context)
-                    .pop(true); // Return true to indicate confirmation
+                Navigator.of(context).pop(true); // Confirm logout
               },
               child: const Text("Logout"),
             ),
@@ -1897,352 +1123,9 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     );
 
     if (confirmLogout == true) {
-      await FirebaseAuth.instance.signOut();
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
+      await _authService.logout(); // Use the AuthService to logout
       Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const SignInPage()));
     }
-  }
-
-  void showSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
-  Drawer _buildRightDrawer() {
-    return Drawer(
-      child: ListView(
-        children: [
-          // Top section with buttons in ExpansionTile
-          ExpansionTile(
-            title: const Text('Options'),
-            leading: const Icon(Icons.settings),
-            initiallyExpanded: _isExpanded,
-            // Set the initial state to expanded
-            onExpansionChanged: (bool expanding) {
-              setState(() {
-                _isExpanded = expanding; // Update state on expansion change
-              });
-            },
-            children: [
-              Padding(
-                padding:
-                    const EdgeInsets.all(16.0), // Add padding around buttons
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child:
-                          _buildRefreshButton(), // Refresh button with extended FAB
-                    ),
-                    const SizedBox(width: 16.0),
-                    // Space between buttons
-                    Expanded(
-                      child:
-                          _buildFilterButton(), // Filter button with extended FAB
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          // Other tiles and content
-          ...buildRightDrawerTiles(context),
-        ],
-      ),
-    );
-  }
-
-  List<Widget> buildRightDrawerTiles(BuildContext context) {
-    final theme = Theme.of(context);
-    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
-    final subtitleColor = theme.textTheme.bodyMedium?.color ?? Colors.grey;
-
-    return [
-      Center(
-        child: Text(
-          'Tutorial',
-          style: TextStyle(
-            fontSize: 20.0,
-            color: textColor,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-      ExpansionTile(
-        title: Text('Find a Scooter', style: TextStyle(color: textColor)),
-        leading: Icon(Icons.directions_walk, color: theme.iconTheme.color),
-        children: [
-          ListTile(
-            title: Text('Instructions', style: TextStyle(color: textColor)),
-            subtitle: Text('Steps on finding a scooter near you.',
-                style: TextStyle(color: subtitleColor)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-          ),
-        ],
-      ),
-      ExpansionTile(
-        title: Text('Start Ride', style: TextStyle(color: textColor)),
-        leading: Icon(Icons.qr_code_scanner, color: theme.iconTheme.color),
-        children: [
-          ListTile(
-            title: Text('Unlock Scooter', style: TextStyle(color: textColor)),
-            subtitle: Text('Scan the QR code to start your ride.',
-                style: TextStyle(color: subtitleColor)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-          ),
-        ],
-      ),
-      ExpansionTile(
-        title: Text('End Ride', style: TextStyle(color: textColor)),
-        leading: Icon(Icons.location_off, color: theme.iconTheme.color),
-        children: [
-          ListTile(
-            title: Text('Parking', style: TextStyle(color: textColor)),
-            subtitle: Text('Locate a designated parking spot.',
-                style: TextStyle(color: subtitleColor)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-          ),
-          ListTile(
-            title: Text('Take Photo', style: TextStyle(color: textColor)),
-            subtitle: Text('Take a photo of the parked scooter.',
-                style: TextStyle(color: subtitleColor)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-          ),
-          ListTile(
-            title: Text('End Ride Confirmation',
-                style: TextStyle(color: textColor)),
-            subtitle: Text('Confirm ride completion in the app.',
-                style: TextStyle(color: subtitleColor)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-          ),
-        ],
-      ),
-      ExpansionTile(
-        title: Text('Zones on the Map', style: TextStyle(color: textColor)),
-        leading: Icon(Icons.map, color: theme.iconTheme.color),
-        children: [
-          ListTile(
-            title: Text('Green Zone', style: TextStyle(color: textColor)),
-            subtitle:
-                Text('Riding allowed.', style: TextStyle(color: subtitleColor)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-          ),
-          ListTile(
-            title: Text('Red Zone', style: TextStyle(color: textColor)),
-            subtitle: Text('No riding allowed.',
-                style: TextStyle(color: subtitleColor)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-          ),
-          ListTile(
-            title: Text('Yellow Zone', style: TextStyle(color: textColor)),
-            subtitle: Text('Reduced speed zone.',
-                style: TextStyle(color: subtitleColor)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-          ),
-          ListTile(
-            title: Text('Grey Zone', style: TextStyle(color: textColor)),
-            subtitle: Text('Scooter unavailable in this area.',
-                style: TextStyle(color: subtitleColor)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-          ),
-        ],
-      ),
-      ExpansionTile(
-        title: Text('FAQs', style: TextStyle(color: textColor)),
-        leading: Icon(Icons.question_answer, color: theme.iconTheme.color),
-        children: [
-          ListTile(
-            title: Text('Common Questions', style: TextStyle(color: textColor)),
-            subtitle: Text('Find answers to frequently asked questions.',
-                style: TextStyle(color: subtitleColor)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-          ),
-          // Add more ListTile widgets for other FAQs
-        ],
-      ),
-      Divider(
-        thickness: 1,
-        indent: 16.0,
-        endIndent: 16.0,
-        color: theme.dividerColor,
-      ),
-      Center(
-        child: Text(
-          'Troubleshooting',
-          style: TextStyle(
-            fontSize: 20.0,
-            color: textColor,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-      ExpansionTile(
-        title: Text('Troubleshooting', style: TextStyle(color: textColor)),
-        leading: Icon(Icons.build, color: theme.iconTheme.color),
-        children: [
-          ListTile(
-            title: Text('Payment Issues', style: TextStyle(color: textColor)),
-            subtitle: Text('Steps to resolve payment problems.',
-                style: TextStyle(color: subtitleColor)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-          ),
-          ListTile(
-            title:
-                Text('Scooter Unavailable', style: TextStyle(color: textColor)),
-            subtitle: Text('What to do if a scooter is unavailable.',
-                style: TextStyle(color: subtitleColor)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-          ),
-          // Add more ListTile widgets for other troubleshooting topics
-        ],
-      ),
-      ExpansionTile(
-        title: Text('Contact Us', style: TextStyle(color: textColor)),
-        leading: Icon(Icons.contact_emergency, color: theme.iconTheme.color),
-        children: [
-          ListTile(
-            title: Text('Email', style: TextStyle(color: textColor)),
-            subtitle: Text('support@Ebike.com',
-                style: TextStyle(color: subtitleColor)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-          ),
-          ListTile(
-            title: Text('Phone Number', style: TextStyle(color: textColor)),
-            subtitle: Text('phone', style: TextStyle(color: subtitleColor)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-          ),
-          // Add more ListTile widgets for other contact methods (if applicable)
-        ],
-      ),
-      ExpansionTile(
-        title: Text('Help Center', style: TextStyle(color: textColor)),
-        leading: Icon(Icons.help, color: theme.iconTheme.color),
-        children: [
-          ListTile(
-            title: Text('Visit our Help Center',
-                style: TextStyle(color: textColor)),
-            subtitle: Text('Detailed guides and tutorials.',
-                style: TextStyle(color: subtitleColor)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-          ),
-        ],
-      ),
-      ExpansionTile(
-        title: Text('Community Forum', style: TextStyle(color: textColor)),
-        leading: Icon(Icons.forum, color: theme.iconTheme.color),
-        children: [
-          ListTile(
-            title:
-                Text('Join the Community', style: TextStyle(color: textColor)),
-            subtitle: Text('Connect with other users and get help.',
-                style: TextStyle(color: subtitleColor)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-          ),
-        ],
-      ),
-      // Add more ExpansionTiles for other support functionalities (if applicable)
-    ];
-  }
-
-  Future<void> _drawRoute(
-      LatLng origin, LatLng destination, MarkerId markerId) async {
-    final String language = context.locale.languageCode;
-    final String url =
-        'https://maps.googleapis.com/maps/api/directions/json?origin='
-        '${origin.latitude},${origin.longitude}&destination='
-        '${destination.latitude},${destination.longitude}&key=${Config.googleMapsApiKey}&language=$language';
-
-    try {
-      final response =
-          await http.get(Uri.parse(url)); // Use http.get to fetch directions
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body); // Decode the JSON response
-
-        if (data['routes'].isNotEmpty) {
-          final route = data['routes'][0];
-
-          // Extract polyline, distance, duration, and steps
-          final points = route['overview_polyline']['points'];
-          final distance = route['legs'][0]['distance']['text'];
-          final duration = route['legs'][0]['duration']['text'];
-
-          List<String> steps = [];
-          for (var step in route['legs'][0]['steps']) {
-            steps.add(
-                step['html_instructions']); // Extract turn-by-turn instructions
-          }
-
-          // Update the marker info with the extracted data
-          setState(() {
-            _addPolyline(points); // Draw the polyline on the map
-
-            // Update the MarkerInfo for the selected destination
-            if (_markerInfoMap.containsKey(markerId)) {
-              _markerInfoMap[markerId] = MarkerInfo(
-                isParking: false,
-
-                id: _markerInfoMap[markerId]!.id,
-                model: _markerInfoMap[markerId]!.model,
-                isAvailable: _markerInfoMap[markerId]!.isAvailable,
-                vehicle: _markerInfoMap[markerId]!.vehicle,
-                isDestination: true,
-                distance: distance,
-                // Set the distance
-                duration: duration,
-                // Set the duration
-                steps: steps, // Set the turn-by-turn instructions
-              );
-            }
-          });
-        } else {
-          Fluttertoast.showToast(
-              msg: 'No routes found',
-              toastLength: Toast.LENGTH_SHORT,
-              gravity: ToastGravity.BOTTOM,
-              timeInSecForIosWeb: 1,
-              backgroundColor: Colors.black,
-              textColor: Colors.white,
-              fontSize: 16.0);
-        }
-      } else {
-        Fluttertoast.showToast(
-            msg:
-                'Failed to fetch directions. Status Code: ${response.statusCode}',
-            toastLength: Toast.LENGTH_SHORT,
-            gravity: ToastGravity.BOTTOM,
-            timeInSecForIosWeb: 1,
-            backgroundColor: Colors.black,
-            textColor: Colors.white,
-            fontSize: 16.0);
-      }
-    } catch (e) {
-      print('Error fetching directions: $e');
-    }
-  }
-
-  void _addPolyline(String encodedPolyline) {
-    List<LatLng> polylinePoints = decodePolyline(encodedPolyline);
-    setState(() {
-      _polylines.clear(); // Clear any previous polylines
-      _polylines.add(
-        Polyline(
-          polylineId: const PolylineId('route'),
-          visible: true,
-          points: polylinePoints,
-          color: Colors.blue,
-          width: 5,
-        ),
-      );
-    });
-  }
-
-  void _updateUserLocation() {
   }
 }

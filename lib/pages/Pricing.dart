@@ -175,7 +175,7 @@ class _BalanceAndPricingPageState extends State<BalanceAndPricingPage> {
 // Simulate payment processing and update balance accordingly
   Future<void> _simulatePaymentProcess(Subscription subscription) async {
     // Simulate a delay for payment processing
-    await Future.delayed(Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 2));
 
     // Randomly decide if payment is successful or failed
     bool isPaymentSuccessful = true;
@@ -380,7 +380,7 @@ class _BalanceAndPricingPageState extends State<BalanceAndPricingPage> {
         return _buildPricingCard(
           subscription.title,
           '${subscription.validDays} days',
-          '${currencyFormat.format(subscription.price)}',
+          currencyFormat.format(subscription.price),
           onTap: () => _showCheckoutScreen(subscription),
         );
       }).toList(),

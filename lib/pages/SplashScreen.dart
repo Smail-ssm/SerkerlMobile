@@ -110,7 +110,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 ],
               ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Text(
               'yourNewWayToSerkel'.tr(),
               style: TextStyle(
@@ -126,12 +126,12 @@ class _SplashScreenState extends State<SplashScreen> {
           children: [
             Text(
               _errorMessage!,
-              style: TextStyle(color: Colors.red, fontSize: 16),
+              style: const TextStyle(color: Colors.red, fontSize: 16),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _initializeApp,
-              child: Text('Retry'),
+              child: const Text('Retry'),
             ),
           ],
         )

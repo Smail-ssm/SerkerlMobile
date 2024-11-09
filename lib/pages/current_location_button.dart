@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class CurrentLocationButton extends StatelessWidget {
   final Function() onPressed;
 
-  CurrentLocationButton({required this.onPressed});
+  const CurrentLocationButton({Key? key, required this.onPressed}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

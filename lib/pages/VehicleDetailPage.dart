@@ -2,7 +2,6 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:ebike/model/MaintenanceLog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
-import 'package:intl/intl.dart';
 import '../model/vehicule.dart';
 import 'tech/MaintenanceLogPage.dart';
 
@@ -10,7 +9,7 @@ class VehicleDetailPage extends StatefulWidget {
   final Vehicle vehicle;
   final String userRole;
 
-  VehicleDetailPage({required this.vehicle, required this.userRole});
+  const VehicleDetailPage({Key? key, required this.vehicle, required this.userRole}) : super(key: key);
 
   @override
   _VehicleDetailPageState createState() => _VehicleDetailPageState();
@@ -19,7 +18,7 @@ class VehicleDetailPage extends StatefulWidget {
 class _VehicleDetailPageState extends State<VehicleDetailPage> {
   bool _isLogVisible = false;
   bool _isSearchVisible = false;
-  TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   DateTime? _selectedDate;
   List<MaintenanceLog> _filteredLogs = [];
 
@@ -86,9 +85,9 @@ class _VehicleDetailPageState extends State<VehicleDetailPage> {
                           children: [
                             Text(
                               'Battery Level'.tr(),
-                              style: TextStyle(fontWeight: FontWeight.bold),
+                              style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
-                            Text('${vehicle.battery.level ?? 'N/A'}%', style: TextStyle(fontSize: 16)),
+                            Text('${vehicle.battery.level ?? 'N/A'}%', style: const TextStyle(fontSize: 16)),
                           ],
                         ),
                       ],
@@ -105,13 +104,13 @@ class _VehicleDetailPageState extends State<VehicleDetailPage> {
                           children: [
                             Text(
                               'Last Maintenance'.tr(),
-                              style: TextStyle(fontWeight: FontWeight.bold),
+                              style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             Text(
                               vehicle.nextMaintenanceDate != null
                                   ? DateFormat('yyyy-MM-dd').format(vehicle.nextMaintenanceDate!)
                                   : 'N/A',
-                              style: TextStyle(fontSize: 16),
+                              style: const TextStyle(fontSize: 16),
                             ),
                           ],
                         ),
@@ -163,9 +162,9 @@ class _VehicleDetailPageState extends State<VehicleDetailPage> {
             controller: _searchController,
             decoration: InputDecoration(
               hintText: 'Search logs...'.tr(),
-              prefixIcon: Icon(Icons.search),
+              prefixIcon: const Icon(Icons.search),
               suffixIcon: IconButton(
-                icon: Icon(Icons.clear),
+                icon: const Icon(Icons.clear),
                 onPressed: () {
                   _searchController.clear();
                   _applyFilters();
@@ -175,18 +174,18 @@ class _VehicleDetailPageState extends State<VehicleDetailPage> {
             ),
             onChanged: (value) => _applyFilters(),
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
                 child: Text(
                   'Filter by Date'.tr(),
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.calendar_today),
+                icon: const Icon(Icons.calendar_today),
                 onPressed: () => _selectDate(),
               ),
             ],
@@ -199,10 +198,10 @@ class _VehicleDetailPageState extends State<VehicleDetailPage> {
                 children: [
                   Text(
                     'Selected Date: ${DateFormat('yyyy-MM-dd').format(_selectedDate!)}',
-                    style: TextStyle(fontSize: 14.0),
+                    style: const TextStyle(fontSize: 14.0),
                   ),
                   IconButton(
-                    icon: Icon(Icons.close),
+                    icon: const Icon(Icons.close),
                     onPressed: () {
                       setState(() {
                         _selectedDate = null;
@@ -257,7 +256,7 @@ class _VehicleDetailPageState extends State<VehicleDetailPage> {
         child: Column(
           children: [
             ListTile(
-              title: Text('Maintenance Logs'.tr(), style: TextStyle(fontWeight: FontWeight.bold)),
+              title: Text('Maintenance Logs'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
               trailing: IconButton(
                 icon: Icon(_isLogVisible ? Icons.expand_less : Icons.expand_more),
                 onPressed: () {
@@ -280,14 +279,14 @@ class _VehicleDetailPageState extends State<VehicleDetailPage> {
                       borderRadius: BorderRadius.circular(8.0),
                     ),
                     child: ListTile(
-                      leading: Icon(Icons.info, color: Colors.blueAccent),
+                      leading: const Icon(Icons.info, color: Colors.blueAccent),
                       title: Text(
-                        '${DateFormat('yyyy-MM-dd').format(log.date)}',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        DateFormat('yyyy-MM-dd').format(log.date),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       subtitle: Text(
                         'Technician: ${log.technicianName}',
-                        style: TextStyle(fontSize: 14),
+                        style: const TextStyle(fontSize: 14),
                       ),
                     ),
                   ),
@@ -296,7 +295,7 @@ class _VehicleDetailPageState extends State<VehicleDetailPage> {
               )
                   : Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: Text('No logs found matching criteria'.tr(), style: TextStyle(fontSize: 14)),
+                child: Text('No logs found matching criteria'.tr(), style: const TextStyle(fontSize: 14)),
               ),
           ],
         ),
@@ -308,7 +307,7 @@ class _VehicleDetailPageState extends State<VehicleDetailPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: false,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
@@ -321,19 +320,19 @@ class _VehicleDetailPageState extends State<VehicleDetailPage> {
               children: [
                 Text(
                   'Maintenance Log Details'.tr(),
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
-                Divider(),
-                SizedBox(height: 8),
+                const Divider(),
+                const SizedBox(height: 8),
                 Text('Date: ${DateFormat('yyyy-MM-dd').format(log.date)}'),
                 Text('Technician: ${log.technicianName}'),
                 Text('Type: ${log.type}'),
                 Text('Cost: ${log.cost.toStringAsFixed(2)}'),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 Text('Notes: ${log.notes}'),
-                SizedBox(height: 20),
-                Text('Maintenance Checks'.tr(), style: TextStyle(fontWeight: FontWeight.bold)),
-                SizedBox(height: 10),
+                const SizedBox(height: 20),
+                Text('Maintenance Checks'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 10),
                 ..._buildCheckDetail(log),
               ],
             ),

@@ -8,7 +8,7 @@ import '../../services/BatteryService.dart';
 import '../../util/util.dart';
 
 class BatteryManagementPage extends StatefulWidget {
-  const BatteryManagementPage() : super();
+  const BatteryManagementPage({Key? key}) : super(key: key);
 
   @override
   _BatteryManagementPageState createState() => _BatteryManagementPageState();
@@ -139,20 +139,16 @@ class _BatteryManagementPageState extends State<BatteryManagementPage> {
     Battery? scannedBattery =
         _batteryList.firstWhere((battery) => battery.id == code);
 
-    if (scannedBattery != null) {
-      Navigator.pop(context); // Close the scanner and return to the main screen
-      _showBatteryDetails(scannedBattery);
-    } else {
-      _showErrorSnackbar('Battery not found.');
+    Navigator.pop(context); // Close the scanner and return to the main screen
+    _showBatteryDetails(scannedBattery);
     }
-  }
 
   void _showBatteryDetails(Battery battery) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Battery Details'),
+          title: const Text('Battery Details'),
           content: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -170,7 +166,7 @@ class _BatteryManagementPageState extends State<BatteryManagementPage> {
               onPressed: () {
                 Navigator.pop(context); // Close the dialog
               },
-              child: Text('Close'),
+              child: const Text('Close'),
             ),
             TextButton(
               onPressed: () {
@@ -178,7 +174,7 @@ class _BatteryManagementPageState extends State<BatteryManagementPage> {
                 _editBatteryStatus(
                     battery); // Allow user to edit battery status
               },
-              child: Text('Edit Status'),
+              child: const Text('Edit Status'),
             ),
           ],
         );
@@ -191,7 +187,7 @@ class _BatteryManagementPageState extends State<BatteryManagementPage> {
       context: context,
       builder: (BuildContext context) {
         return SimpleDialog(
-          title: Text('Edit Battery Status'),
+          title: const Text('Edit Battery Status'),
           children: [
             SimpleDialogOption(
               onPressed: () {

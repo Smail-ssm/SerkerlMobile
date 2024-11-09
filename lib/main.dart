@@ -105,10 +105,10 @@ Future<void> main() async {
 
   runApp(
     EasyLocalization(
-      supportedLocales: [
-        const Locale('en', 'US'),
-        const Locale('fr', 'FR'),
-        const Locale('ar', 'TN')
+      supportedLocales: const [
+        Locale('en', 'US'),
+        Locale('fr', 'FR'),
+        Locale('ar', 'TN')
       ],
       path: 'assets/translations',
       fallbackLocale: const Locale('en', 'US'),

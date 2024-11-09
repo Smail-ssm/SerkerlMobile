@@ -20,9 +20,11 @@ class menuButton extends StatelessWidget {
 
           return RawMaterialButton(
             onPressed: () {
-              scaffoldKey.currentState?.openDrawer(); // Open the drawer when the button is pressed
+              scaffoldKey.currentState
+                  ?.openDrawer(); // Open the drawer when the button is pressed
             },
-            fillColor: buttonColor, // Adaptable to light and dark mode
+            fillColor: buttonColor,
+            // Adaptable to light and dark mode
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8.0), // Rounded corners
             ),
@@ -40,5 +42,4 @@ class menuButton extends StatelessWidget {
       ),
     );
   }
-
 }

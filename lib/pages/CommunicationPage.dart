@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:intl/intl.dart';
@@ -9,7 +8,7 @@ class JuicerCommunicationPage extends StatefulWidget {
   final Client client;
   final String sessionId;
 
-  JuicerCommunicationPage({required this.client, required this.sessionId});
+  const JuicerCommunicationPage({Key? key, required this.client, required this.sessionId}) : super(key: key);
 
   @override
   _JuicerCommunicationPageState createState() => _JuicerCommunicationPageState();

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class FilterButton extends StatelessWidget {
   final Function() onPressed;
 
-  FilterButton({required this.onPressed});
+  const FilterButton({Key? key, required this.onPressed}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

@@ -9,7 +9,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
-import 'Map.dart'; // Import your home page or the next page after signing up
+// Import your home page or the next page after signing up
 
 class SignUpPage extends StatefulWidget {
   final User? user; // Declare user variable to accept user info
@@ -131,7 +131,7 @@ class _SignUpPageState extends State<SignUpPage> {
               ),
             ),
             if (_isLoading)
-              Center(
+              const Center(
                 child: CircularProgressIndicator(),
               ),
           ],

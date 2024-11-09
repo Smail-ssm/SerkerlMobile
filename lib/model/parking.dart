@@ -1,4 +1,3 @@
-import 'dart:ui';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -36,7 +35,7 @@ class Parking {
   factory Parking.fromJson(Map<String, dynamic> json) {
     List<dynamic>? coordinatesData = json['coordinates']; // Get the 'coordinates' array from the JSON
 
-    LatLng coordinates = LatLng(0.0, 0.0); // Default coordinates
+    LatLng coordinates = const LatLng(0.0, 0.0); // Default coordinates
 
     // Check if the 'coordinates' array exists and has the correct structure
     if (coordinatesData != null && coordinatesData.isNotEmpty) {

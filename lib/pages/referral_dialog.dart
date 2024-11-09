@@ -41,7 +41,7 @@ class _ReferralDialogState extends State<ReferralDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Enter Referral Code'),
+      title: const Text('Enter Referral Code'),
       content: TextField(
         controller: _codeController,
         decoration: InputDecoration(
@@ -52,7 +52,7 @@ class _ReferralDialogState extends State<ReferralDialog> {
       actions: [
         TextButton(
           onPressed: _submitCode,
-          child: Text('Submit'),
+          child: const Text('Submit'),
         ),
       ],
     );

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../model/area.dart';
 import '../util/util.dart';
 
@@ -10,10 +11,8 @@ class AreaService {
       String documentPath = getFirestoreDocument();
       final areasCollection = _firestore.collection(documentPath);
 
-      QuerySnapshot querySnapshot = await areasCollection
-          .doc('Areas')
-          .collection('Areas')
-          .get();
+      QuerySnapshot querySnapshot =
+          await areasCollection.doc('Areas').collection('Areas').get();
 
       return querySnapshot.docs.map((doc) {
         Map<String, dynamic>? data = doc.data() as Map<String, dynamic>?;

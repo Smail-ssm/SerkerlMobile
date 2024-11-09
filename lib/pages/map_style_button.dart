@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class MapStyleButton extends StatelessWidget {
   final Function() onPressed;
 
-  MapStyleButton({required this.onPressed});
+  const MapStyleButton({Key? key, required this.onPressed}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

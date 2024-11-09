@@ -10,7 +10,7 @@ import '../model/client.dart';
 class SupportPage extends StatefulWidget {
   final Client? client;
 
-  SupportPage({required this.client});
+  const SupportPage({Key? key, required this.client}) : super(key: key);
 
   @override
   _SupportPageState createState() => _SupportPageState();

@@ -54,6 +54,11 @@ dependencies:
   uni_links: ^0.5.1
   firebase_database: ^10.5.7
   flutter_speed_dial: ^7.0.0
+  bottom_navy_bar: ^6.1.0
+  flutter_advanced_drawer: ^1.3.6
+  intl: any
+  uuid: any
+  args: any
 google_maps_webservice: ^0.0.20
 
 

@@ -202,12 +202,12 @@ class _CodeInputBottomSheetState extends State<CodeInputBottomSheet> {
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setState) {
-            return AlertDialog(
-              title: const Text('Unlocking Vehicle'),
+            return const AlertDialog(
+              title: Text('Unlocking Vehicle'),
               content: Row(
                 children: [
-                  const CircularProgressIndicator(), // Loading spinner
-                  const SizedBox(width: 16), // Add some space between the spinner and text
+                  CircularProgressIndicator(), // Loading spinner
+                  SizedBox(width: 16), // Add some space between the spinner and text
                   Expanded( // Expanded forces the text to take up the remaining space
                     child: Text('Please wait while we unlock the vehicle...'),
                   ),

@@ -4,7 +4,7 @@ class MapGuideButton extends StatelessWidget {
   final Function() onPressed;
   final bool isGuideOpen;
 
-  MapGuideButton({required this.onPressed, required this.isGuideOpen});
+  const MapGuideButton({Key? key, required this.onPressed, required this.isGuideOpen}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:uuid/uuid.dart';
@@ -9,7 +8,7 @@ import 'CommunicationPage.dart';
 class SessionListPage extends StatefulWidget {
   final Client client;
 
-  SessionListPage({required this.client});
+  const SessionListPage({Key? key, required this.client}) : super(key: key);
 
   @override
   _SessionListPageState createState() => _SessionListPageState();
@@ -94,7 +93,7 @@ class _SessionListPageState extends State<SessionListPage> {
                 onDismissed: (direction) {
                   _hideSession(sessionId);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Session hidden')),
+                    const SnackBar(content: Text('Session hidden')),
                   );
                 },
                 child: ListTile(

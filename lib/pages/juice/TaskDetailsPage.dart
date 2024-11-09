@@ -7,36 +7,36 @@ import '../../model/task.dart';
 class TaskDetailsPage extends StatelessWidget {
   final Task task;
 
-  TaskDetailsPage({required this.task});
+  const TaskDetailsPage({Key? key, required this.task}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Task Details'),
+        title: const Text('Task Details'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Vehicle Model: ${task.vehicleModel}', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            SizedBox(height: 10),
-            Text('Battery Level: ${task.batteryLevel}%', style: TextStyle(fontSize: 16)),
-            SizedBox(height: 10),
-            Text('Task Type: ${task.taskType}', style: TextStyle(fontSize: 16)),
-            SizedBox(height: 10),
-            Text('Status: ${task.status}', style: TextStyle(fontSize: 16)),
-            SizedBox(height: 10),
-            Text('Address: ${task.address}', style: TextStyle(fontSize: 16)),
-            SizedBox(height: 10),
-            Text('Latitude: ${task.latitude}', style: TextStyle(fontSize: 16)),
-            SizedBox(height: 10),
-            Text('Longitude: ${task.longitude}', style: TextStyle(fontSize: 16)),
-            SizedBox(height: 10),
-            Text('Assigned To: ${task.assignedToName ?? 'Not Assigned'}', style: TextStyle(fontSize: 16)),
-            SizedBox(height: 10),
-            Text('Created At: ${DateFormat('yyyy-MM-dd – kk:mm').format(task.createdAt.toLocal())}', style: TextStyle(fontSize: 16)),
+            Text('Vehicle Model: ${task.vehicleModel}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            Text('Battery Level: ${task.batteryLevel}%', style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 10),
+            Text('Task Type: ${task.taskType}', style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 10),
+            Text('Status: ${task.status}', style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 10),
+            Text('Address: ${task.address}', style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 10),
+            Text('Latitude: ${task.latitude}', style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 10),
+            Text('Longitude: ${task.longitude}', style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 10),
+            Text('Assigned To: ${task.assignedToName ?? 'Not Assigned'}', style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 10),
+            Text('Created At: ${DateFormat('yyyy-MM-dd – kk:mm').format(task.createdAt.toLocal())}', style: const TextStyle(fontSize: 16)),
           ],
         ),
       ),

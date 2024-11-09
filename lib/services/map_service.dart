@@ -1,13 +1,17 @@
+import 'dart:convert';
 import 'dart:ui';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
 
 import '../model/client.dart';
 import '../model/parking.dart';
 import '../model/vehicule.dart';
+import '../util/Config.dart';
 import '../util/util.dart';
 import '../widgets/MarkerInfo.dart';
 import 'Vehicleservice.dart';
@@ -17,16 +21,16 @@ class MapService {
   final ParkingService _parkingService;
   final Vehicleservice _vehicleService;
 
-  MapService(this._parkingService, this._vehicleService);
+   MapService( this._parkingService, this._vehicleService);
 
   // Create custom icon function
   Future<BitmapDescriptor> createCustomIcon(IconData icon, Color color) async {
-    final iconSize = 120.0;
+    const iconSize = 120.0;
     final pictureRecorder = PictureRecorder();
     final canvas = Canvas(pictureRecorder);
     final paint = Paint()..color = color;
 
-    canvas.drawCircle(Offset(iconSize / 2, iconSize / 2), iconSize / 2, paint);
+    canvas.drawCircle(const Offset(iconSize / 2, iconSize / 2), iconSize / 2, paint);
 
     final textPainter = TextPainter(textDirection: TextDirection.ltr);
     textPainter.text = TextSpan(
@@ -37,7 +41,7 @@ class MapService {
           color: Colors.white),
     );
     textPainter.layout();
-    textPainter.paint(canvas, Offset(iconSize / 4, iconSize / 4));
+    textPainter.paint(canvas, const Offset(iconSize / 4, iconSize / 4));
 
     final image = await pictureRecorder
         .endRecording()
@@ -180,6 +184,112 @@ class MapService {
           'User location updated: ${position.latitude}, ${position.longitude}');
     } catch (e) {
       debugPrint('Error updating location: $e');
+    }
+  }
+  void addPolyline(
+      String encodedPolyline, Set<Polyline> polylines, Function updatePolylines) {
+    List<LatLng> polylinePoints = decodePolyline(encodedPolyline);
+    updatePolylines(() {
+      polylines.clear(); // Clear any previous polylines
+      polylines.add(
+        Polyline(
+          polylineId: const PolylineId('route'),
+          visible: true,
+          points: polylinePoints,
+          color: Colors.blue,
+          width: 5,
+        ),
+      );
+    });
+  }
+
+  List<LatLng> decodePolyline(String encoded) {
+    List<LatLng> polylinePoints = [];
+    int index = 0, len = encoded.length;
+    int lat = 0, lng = 0;
+
+    while (index < len) {
+      int b, shift = 0, result = 0;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      int dLat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lat += dLat;
+
+      shift = 0;
+      result = 0;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      int dLng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lng += dLng;
+
+      polylinePoints.add(LatLng(lat / 1E5, lng / 1E5));
+    }
+    return polylinePoints;
+  }
+
+  Future<Map<String, dynamic>?> fetchRouteDetails(
+      LatLng origin, LatLng destination, String language) async {
+    final String url =
+        'https://maps.googleapis.com/maps/api/directions/json?origin='
+        '${origin.latitude},${origin.longitude}&destination='
+        '${destination.latitude},${destination.longitude}&key=${Config.googleMapsApiKey}&language=$language';
+
+    try {
+      final response = await http.get(Uri.parse(url)); // Use http.get to fetch directions
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body); // Decode the JSON response
+
+        if (data['routes'].isNotEmpty) {
+          final route = data['routes'][0];
+
+          // Extract polyline, distance, duration, and steps
+          final points = route['overview_polyline']['points'];
+          final distance = route['legs'][0]['distance']['text'];
+          final duration = route['legs'][0]['duration']['text'];
+
+          List<String> steps = [];
+          for (var step in route['legs'][0]['steps']) {
+            steps.add(step['html_instructions']); // Extract turn-by-turn instructions
+          }
+
+          return {
+            'points': points,
+            'distance': distance,
+            'duration': duration,
+            'steps': steps,
+          };
+        } else {
+          Fluttertoast.showToast(
+              msg: 'No routes found',
+              toastLength: Toast.LENGTH_SHORT,
+              gravity: ToastGravity.BOTTOM,
+              timeInSecForIosWeb: 1,
+              backgroundColor: Colors.black,
+              textColor: Colors.white,
+              fontSize: 16.0);
+          return null;
+        }
+      } else {
+        Fluttertoast.showToast(
+            msg:
+            'Failed to fetch directions. Status Code: ${response.statusCode}',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Colors.black,
+            textColor: Colors.white,
+            fontSize: 16.0);
+        return null;
+      }
+    } catch (e) {
+      print('Error fetching directions: $e');
+      return null;
     }
   }
 }

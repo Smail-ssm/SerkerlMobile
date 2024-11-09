@@ -1,19 +1,18 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../model/client.dart';
 
 class JuicerEarningsPage extends StatelessWidget {
   final Client? client;
-  JuicerEarningsPage({required this.client});
+  const JuicerEarningsPage({Key? key, required this.client}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('JuicerEarningsPage'),
+        title: const Text('JuicerEarningsPage'),
       ),
-      body: Center(
+      body: const Center(
         child: Text('List of vehicles assigned to you.'),
       ),
     );

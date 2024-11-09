@@ -7,22 +7,23 @@ import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../model/LocationInfo.dart';
 import '../model/client.dart';
 import '../model/vehicule.dart';
 import 'Config.dart';
-import 'package:http/http.dart' as http;
 
 BitmapDescriptor getMarkerIcon(
-    Vehicle? vehicle, // Vehicle can be null
-    BitmapDescriptor scooterIcon,
-    BitmapDescriptor ebikeIcon,
-    BitmapDescriptor parkingIcon, // Pass the custom parking icon
-    ) {
+  Vehicle? vehicle, // Vehicle can be null
+  BitmapDescriptor scooterIcon,
+  BitmapDescriptor ebikeIcon,
+  BitmapDescriptor parkingIcon, // Pass the custom parking icon
+) {
   if (vehicle == null) {
     return parkingIcon; // Return parking icon if no vehicle is passed
   }
@@ -36,7 +37,6 @@ BitmapDescriptor getMarkerIcon(
     return BitmapDescriptor.defaultMarker; // Fallback if no model matches
   }
 }
-
 
 void showMessageDialog(BuildContext context, String message) {
   showDialog(
@@ -149,8 +149,11 @@ Future<Client?> fetchClientData(String userId) async {
 
   try {
     // Retrieve user document from Firestore using the user ID
-    DocumentSnapshot userDoc =
-        await usersCollection.doc('users').collection('users').doc(userId).get();
+    DocumentSnapshot userDoc = await usersCollection
+        .doc('users')
+        .collection('users')
+        .doc(userId)
+        .get();
 
     // Check if the user document exists
     if (userDoc.exists) {
@@ -171,13 +174,13 @@ Future<Client?> fetchClientData(String userId) async {
 
 Future<BitmapDescriptor> createCustomIcon(
     IconData iconData, Color color) async {
-  final size = 150.0;
+  const size = 150.0;
   final pictureRecorder = ui.PictureRecorder();
   final canvas = Canvas(
       pictureRecorder,
       Rect.fromPoints(
-        Offset(0.0, 0.0),
-        Offset(size, size),
+        const Offset(0.0, 0.0),
+        const Offset(size, size),
       ));
 
   final paint = Paint()
@@ -185,7 +188,7 @@ Future<BitmapDescriptor> createCustomIcon(
     ..style = PaintingStyle.fill;
 
   final iconPainter = IconPainter(iconData, color, size);
-  iconPainter.paint(canvas, Size(size, size));
+  iconPainter.paint(canvas, const Size(size, size));
 
   final picture = pictureRecorder.endRecording();
   final img = await picture.toImage(size.toInt(), size.toInt());
@@ -194,6 +197,7 @@ Future<BitmapDescriptor> createCustomIcon(
 
   return BitmapDescriptor.fromBytes(buffer);
 }
+
 void requestPermissions(BuildContext context) async {
   LocationPermission permission = await Geolocator.checkPermission();
   if (permission == LocationPermission.denied) {
@@ -246,6 +250,7 @@ class IconPainter extends CustomPainter {
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
+
 Future<LocationInfo?> getAddressFromLatLng(double lat, double lng) async {
   String _host = 'https://maps.googleapis.com/maps/api/geocode/json';
   final url =
@@ -262,6 +267,7 @@ Future<LocationInfo?> getAddressFromLatLng(double lat, double lng) async {
     return null;
   }
 }
+
 // Polyline decoder method
 List<LatLng> decodePolyline(String polyline) {
   List<LatLng> points = [];
@@ -293,12 +299,13 @@ List<LatLng> decodePolyline(String polyline) {
 
   return points;
 }
+
 Widget buildListTile(
-    String title,
-    IconData icon,
-    VoidCallback onTap, {
-      String? value,
-    }) {
+  String title,
+  IconData icon,
+  VoidCallback onTap, {
+  String? value,
+}) {
   return ListTile(
     leading: Icon(icon),
     title: Text(title),
@@ -313,8 +320,10 @@ double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
   double dLat = _degToRad(lat2 - lat1);
   double dLon = _degToRad(lon2 - lon1);
   double a = sin(dLat / 2) * sin(dLat / 2) +
-      cos(_degToRad(lat1)) * cos(_degToRad(lat2)) *
-          sin(dLon / 2) * sin(dLon / 2);
+      cos(_degToRad(lat1)) *
+          cos(_degToRad(lat2)) *
+          sin(dLon / 2) *
+          sin(dLon / 2);
   double c = 2 * atan2(sqrt(a), sqrt(1 - a));
   return R * c; // Distance in meters
 }
@@ -329,9 +338,33 @@ String formatDistance(double distanceInMeters) {
   return '${distanceInKm.toStringAsFixed(2)} km';
 }
 
+void showToast(String message) {
+  Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      timeInSecForIosWeb: 1,
+      backgroundColor: Colors.black,
+      textColor: Colors.white,
+      fontSize: 16.0);
+}
+
 // Format time to minutes and seconds
 String formatTime(double timeInSeconds) {
   int minutes = (timeInSeconds / 60).floor();
   int seconds = (timeInSeconds % 60).floor();
   return '${minutes}m ${seconds}s';
+}
+
+String defaultImageUrl() {
+  return 'https://placehold.co/300x200?text=No+Image'; // Default image placeholder
+}
+
+void showSnackBar(BuildContext context, String message) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(message),
+      duration: const Duration(seconds: 2),
+    ),
+  );
 }

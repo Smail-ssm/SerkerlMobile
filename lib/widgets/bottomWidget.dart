@@ -1,8 +1,8 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../model/vehicule.dart';
+
 import 'MarkerInfo.dart';
 
 class VehicleBottomSheet extends StatelessWidget {
@@ -17,7 +17,8 @@ class VehicleBottomSheet extends StatelessWidget {
   final BuildContext context;
   final MarkerInfo markerInfo;
   final LatLng? currentLocation;
-  final Function(LatLng origin, LatLng destination, MarkerId markerId) drawRoute;
+  final Function(LatLng origin, LatLng destination, MarkerId markerId)
+      drawRoute;
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +44,9 @@ class VehicleBottomSheet extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: isDarkMode ? Colors.grey[900] : Colors.white, // Set color based on theme
+        color: isDarkMode
+            ? Colors.grey[900]
+            : Colors.white, // Set color based on theme
         borderRadius: BorderRadius.circular(12.0),
         boxShadow: [
           BoxShadow(
@@ -69,7 +72,9 @@ class VehicleBottomSheet extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white : Colors.black, // Dynamic text color
+                      color: isDarkMode
+                          ? Colors.white
+                          : Colors.black, // Dynamic text color
                     ),
                   ),
                   const SizedBox(height: 8.0),
@@ -77,13 +82,16 @@ class VehicleBottomSheet extends StatelessWidget {
                     children: [
                       Icon(
                         _getBatteryIcon(markerInfo.vehicle!.battery.level),
-                        color: _getBatteryIconColor(markerInfo.vehicle!.battery.level),
+                        color: _getBatteryIconColor(
+                            markerInfo.vehicle!.battery.level),
                       ),
                       const SizedBox(width: 4.0),
                       Text(
                         '${calculateRange(markerInfo.vehicle!.battery.level) ?? 'N/A'} %',
                         style: TextStyle(
-                          color: isDarkMode ? Colors.white70 : Colors.black87, // Dynamic text color
+                          color: isDarkMode
+                              ? Colors.white70
+                              : Colors.black87, // Dynamic text color
                         ),
                       ),
                     ],
@@ -93,7 +101,9 @@ class VehicleBottomSheet extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8.0),
                 decoration: BoxDecoration(
-                  color: isDarkMode ? Colors.grey[850] : Colors.black, // Dynamic color
+                  color: isDarkMode
+                      ? Colors.grey[850]
+                      : Colors.black, // Dynamic color
                   borderRadius: BorderRadius.circular(8.0),
                 ),
                 child: const Icon(
@@ -117,7 +127,8 @@ class VehicleBottomSheet extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(25.0),
                 ),
-                padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 48.0),
+                padding: const EdgeInsets.symmetric(
+                    vertical: 16.0, horizontal: 48.0),
               ),
               child: const Text(
                 'Start ride',
@@ -136,7 +147,9 @@ class VehicleBottomSheet extends StatelessWidget {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16.0,
-              color: isDarkMode ? Colors.white70 : Colors.black87, // Dynamic text color
+              color: isDarkMode
+                  ? Colors.white70
+                  : Colors.black87, // Dynamic text color
             ),
           ),
           const SizedBox(height: 4.0),
@@ -144,7 +157,9 @@ class VehicleBottomSheet extends StatelessWidget {
             '1.00 DT + 0.250 DT/min',
             style: TextStyle(
               fontSize: 14.0,
-              color: isDarkMode ? Colors.white60 : Colors.black54, // Dynamic text color
+              color: isDarkMode
+                  ? Colors.white60
+                  : Colors.black54, // Dynamic text color
             ),
           ),
           const SizedBox(height: 16.0),
@@ -154,13 +169,17 @@ class VehicleBottomSheet extends StatelessWidget {
           Text(
             'Distance: ${_formatDistance(distance)}',
             style: TextStyle(
-              color: isDarkMode ? Colors.white70 : Colors.black87, // Dynamic text color
+              color: isDarkMode
+                  ? Colors.white70
+                  : Colors.black87, // Dynamic text color
             ),
           ),
           Text(
             'Estimated Time on Foot: ${_formatTime(walkingTime)}',
             style: TextStyle(
-              color: isDarkMode ? Colors.white70 : Colors.black87, // Dynamic text color
+              color: isDarkMode
+                  ? Colors.white70
+                  : Colors.black87, // Dynamic text color
             ),
           ),
           const SizedBox(height: 16.0),
@@ -216,13 +235,16 @@ class VehicleBottomSheet extends StatelessWidget {
   }
 
   // Function to calculate distance between two LatLng points (Haversine Formula)
-  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+  double _calculateDistance(
+      double lat1, double lon1, double lat2, double lon2) {
     const double R = 6371000; // Radius of the Earth in meters
     double dLat = _degToRad(lat2 - lat1);
     double dLon = _degToRad(lon2 - lon1);
     double a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(_degToRad(lat1)) * cos(_degToRad(lat2)) *
-            sin(dLon / 2) * sin(dLon / 2);
+        cos(_degToRad(lat1)) *
+            cos(_degToRad(lat2)) *
+            sin(dLon / 2) *
+            sin(dLon / 2);
     double c = 2 * atan2(sqrt(a), sqrt(1 - a));
     return R * c; // Distance in meters
   }
@@ -242,9 +264,9 @@ class VehicleBottomSheet extends StatelessWidget {
     int minutes = (timeInSeconds / 60).floor();
     int seconds = (timeInSeconds % 60).floor();
     return '${minutes}m ${seconds}s';
-  }calculateRange(double id) {
+  }
 
-    return(id);
+  calculateRange(double id) {
+    return (id);
   }
 }
-

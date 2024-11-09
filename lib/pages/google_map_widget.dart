@@ -9,14 +9,14 @@ class GoogleMapWidget extends StatelessWidget {
   final Function(LatLng) onLongPress;
   final GoogleMapController? mapController;
 
-  GoogleMapWidget({
+  const GoogleMapWidget({Key? key, 
     required this.currentLocation,
     required this.polygons,
     required this.markers,
     required this.polylines,
     required this.onLongPress,
     this.mapController,
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

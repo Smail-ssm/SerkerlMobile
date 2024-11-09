@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../model/area.dart';
 import '../model/parking.dart';
 import '../util/util.dart';
 
@@ -20,9 +19,6 @@ class ParkingService {
 
       return querySnapshot.docs.map((doc) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        if (data == null) {
-          throw Exception('Document data is null');
-        }
         data['id'] = doc.id;
         return Parking.fromJson(data);
       }).toList();
