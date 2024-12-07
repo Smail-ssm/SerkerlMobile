@@ -1,14 +1,14 @@
 import 'package:ebike/widgets/share_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 
-import '../model/client.dart';
-import '../pages/ClientProfilePage.dart';
-import '../pages/FeedbackPage.dart';
-import '../pages/History.dart';
-import '../pages/NotificationsList.dart';
-import '../pages/Pricing.dart';
-import '../pages/SupportPage.dart';
-import 'UserAccountsDrawerHeaderWidget.dart';
+import '../../model/client.dart';
+import '../../pages/ClientProfilePage.dart';
+import '../../pages/FeedbackPage.dart';
+import '../../pages/History.dart';
+import '../../pages/NotificationsList.dart';
+import '../../pages/Pricing.dart';
+import '../../pages/SupportPage.dart';
+import '../UserAccountsDrawerHeaderWidget.dart';
 
 class LeftDrawer extends StatelessWidget {
   final Client client;

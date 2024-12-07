@@ -8,6 +8,7 @@ class Vehicle {
   String model;
   Battery battery;
   bool isAvailable;
+  bool isReserved;
   double? latitude;
   double? longitude;
   Rental? rental;
@@ -25,6 +26,7 @@ class Vehicle {
     required this.model,
     required this.battery,
     required this.isAvailable,
+    required this.isReserved,
     this.latitude,
     this.longitude,
     this.rental,
@@ -45,6 +47,7 @@ class Vehicle {
       model: json['model'] as String,
       battery: Battery.fromJson(json['battery'] as Map<String, dynamic>),
       isAvailable: json['isAvailable'] as bool,
+      isReserved: json['isReserved'] as bool,
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
       rental: json['rental'] is Map<String, dynamic>
@@ -76,6 +79,7 @@ class Vehicle {
       'model': model,
       'battery': battery.toJson(),
       'isAvailable': isAvailable,
+      'isReserved': isReserved,
       'latitude': latitude,
       'longitude': longitude,
       'rental': rental?.toJson(),

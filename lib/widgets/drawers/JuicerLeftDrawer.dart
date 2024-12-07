@@ -1,17 +1,15 @@
 import 'package:ebike/model/vehicule.dart';
 import 'package:flutter/material.dart';
-import '../model/client.dart';
-import '../pages/ClientProfilePage.dart';
-import '../pages/NotificationsList.dart';
-import '../pages/SessionListPage.dart';
-import '../pages/SupportPage.dart';
-import '../pages/juice/BatteryManagementPage.dart';
-import '../pages/juice/JuicerDashboardPage.dart';
-import '../pages/juice/JuicerEarningsPage.dart';
-import '../pages/juice/JuicerTaskListPage.dart';
-import '../pages/juice/JuicerVehicleListPage.dart';
+import '../../model/client.dart';
+import '../../pages/ClientProfilePage.dart';
+import '../../pages/NotificationsList.dart';
+import '../../pages/juice/BatteryManagementPage.dart';
+import '../../pages/juice/JuicerDashboardPage.dart';
+import '../../pages/juice/JuicerEarningsPage.dart';
+import '../../pages/juice/JuicerTaskListPage.dart';
+import '../../pages/juice/JuicerVehicleListPage.dart';
 
-import 'UserAccountsDrawerHeaderWidget.dart';
+import '../UserAccountsDrawerHeaderWidget.dart';
 
 class JuicerLeftDrawer extends StatelessWidget {
   final Client client;
@@ -110,17 +108,7 @@ class JuicerLeftDrawer extends StatelessWidget {
               );
             },
           ),
-          buildListTile(
-            'Communication',
-            Icons.message,
-                () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => SessionListPage(client: client)),
-              );
-            },
-          ),
+
 
           const Divider(),
 
@@ -153,17 +141,7 @@ class JuicerLeftDrawer extends StatelessWidget {
               );
             },
           ),
-          buildListTile(
-            'Support',
-            Icons.support_agent,
-                () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => SupportPage(client: client)),
-              );
-            },
-          ),
+
           buildListTile(
             'Profile',
             Icons.person,

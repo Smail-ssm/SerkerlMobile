@@ -79,7 +79,7 @@ class _SplashScreenState extends State<SplashScreen> {
     } catch (e) {
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Failed to initialize app: $e';
+        // _errorMessage = 'Failed to initialize app: $e';
       });
     }
   }
@@ -87,7 +87,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.white,
       body: Center(
         child: _isLoading
             ? Column(

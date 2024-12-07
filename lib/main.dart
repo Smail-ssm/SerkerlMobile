@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:in_app_notification/in_app_notification.dart';
 import 'package:uni_links/uni_links.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'dart:async'; // For StreamSubscription
@@ -71,14 +72,14 @@ Future<void> main() async {
     // Background handler for Firebase messages
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   } catch (e) {
-    Fluttertoast.showToast(
-      msg: 'Firebase initialization error: $e',
-      toastLength: Toast.LENGTH_SHORT,
-      gravity: ToastGravity.BOTTOM,
-      backgroundColor: Colors.black,
-      textColor: Colors.white,
-      fontSize: 16.0,
-    );
+    // Fluttertoast.showToast(
+    //   msg: 'Firebase initialization error: $e',
+    //   toastLength: Toast.LENGTH_SHORT,
+    //   gravity: ToastGravity.BOTTOM,
+    //   backgroundColor: Colors.black,
+    //   textColor: Colors.white,
+    //   fontSize: 16.0,
+    // );
   }
 
   // Load environment variables
@@ -186,24 +187,26 @@ class _MyAppState extends State<MyApp> {
       );
     }
   }
-
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      localizationsDelegates: context.localizationDelegates,
-      supportedLocales: context.supportedLocales,
-      locale: context.locale,
-      title: 'serkel'.tr(),
-      themeMode: _themeMode, // Apply the selected theme mode
-      theme: lightTheme,
-      darkTheme: darkTheme,
-      initialRoute: '/',
-      routes: {
-        '/': (context) => const SplashScreen(),
-        '/onboarding': (context) => const OnboardingPage(),
-        '/home': (context) => const MapPage(),
-        '/signin': (context) => const SignInPage(),
-      },
+    return InAppNotification(
+      child: MaterialApp(
+        localizationsDelegates: context.localizationDelegates,
+        supportedLocales: context.supportedLocales,
+        locale: context.locale,
+        title: 'serkel'.tr(),
+        themeMode: _themeMode, // Apply the selected theme mode
+        theme: lightTheme,
+        darkTheme: darkTheme,
+        initialRoute: '/',
+        routes: {
+          '/': (context) => const SplashScreen(),
+          '/onboarding': (context) => const OnboardingPage(),
+          '/home': (context) => const MapPage(),
+          '/signin': (context) => const SignInPage(),
+        },
+      ),
+
     );
   }
 }

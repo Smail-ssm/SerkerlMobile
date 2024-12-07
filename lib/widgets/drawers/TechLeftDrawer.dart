@@ -1,16 +1,12 @@
 import 'package:ebike/model/vehicule.dart';
 import 'package:flutter/material.dart';
-import '../model/client.dart';
-import '../pages/ClientProfilePage.dart';
-import '../pages/History.dart';
-import '../pages/NotificationsList.dart';
-import '../pages/Pricing.dart';
-import '../pages/SupportPage.dart';
+import '../../model/client.dart';
+import '../../pages/ClientProfilePage.dart';
 
-import '../pages/tech/TechPerformanceMetricsPage .dart';
-import '../pages/tech/TechRemoteDiagnosticsPage.dart';
-import '../pages/tech/TechWorkOrderManagementPage.dart';
-import 'UserAccountsDrawerHeaderWidget.dart';
+import '../../pages/tech/TechPerformanceMetricsPage .dart';
+import '../../pages/tech/TechRemoteDiagnosticsPage.dart';
+import '../../pages/tech/TechWorkOrderManagementPage.dart';
+import '../UserAccountsDrawerHeaderWidget.dart';
 
 class TechLeftDrawer extends StatelessWidget {
   final Client client;
@@ -104,51 +100,6 @@ class TechLeftDrawer extends StatelessWidget {
 
           // Account Section
           _buildSectionHeader('Account'),
-          buildListTile(
-            'Balance',
-            Icons.account_balance,
-                () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => BalanceAndPricingPage(client: client)),
-              );
-            },
-            value: client.balance.toString(),
-          ),
-          buildListTile(
-            'Ride History',
-            Icons.history,
-                () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => HistoryPage(client: client)),
-              );
-            },
-          ),
-          buildListTile(
-            'Notifications',
-            Icons.notifications,
-                () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => NotificationsPage(client: client)),
-              );
-            },
-          ),
-          buildListTile(
-            'Support',
-            Icons.support_agent,
-                () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => SupportPage(client: client)),
-              );
-            },
-          ),
           buildListTile(
             'Profile',
             Icons.person,

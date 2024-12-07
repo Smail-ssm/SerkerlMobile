@@ -10,7 +10,6 @@ import 'package:flutter_html/flutter_html.dart' as html;
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../model/area.dart';
 import '../model/client.dart';
@@ -24,18 +23,19 @@ import '../util/VehicleUtils.dart';
 import '../util/util.dart';
 import '../widgets/CodeInputBottomSheet.dart';
 import '../widgets/CustomGoogleMap.dart';
-import '../widgets/JuicerLeftDrawer.dart';
-import '../widgets/LeftDrawer.dart';
 import '../widgets/MapGuideBottomSheet.dart';
 import '../widgets/MarkerInfo.dart';
 import '../widgets/ParkingImages.dart';
 import '../widgets/PositionedButton.dart';
 import '../widgets/RightDrawer.dart';
 import '../widgets/ScanCodeButton.dart';
-import '../widgets/TechLeftDrawer.dart';
 import '../widgets/bottomWidget.dart';
+import '../widgets/drawers/JuicerLeftDrawer.dart';
+import '../widgets/drawers/LeftDrawer.dart';
+import '../widgets/drawers/TechLeftDrawer.dart';
 import '../widgets/infoBUtton.dart';
 import '../widgets/menuButton.dart';
+import 'SessionListPage.dart';
 
 class MapPage extends StatefulWidget {
   final Client? client;
@@ -73,6 +73,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
   final ParkingService _parkingService = ParkingService();
   bool isLoadingLocation = true;
   bool isJuicer = false;
+  bool isTechOrJuicer = false;
   final bool _showMapGuide = false;
 
   late LatLng _destination; // Track loading state
@@ -83,9 +84,8 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     super.initState();
 
     _initializeLocation();
-    _loadMapStyle();
     WidgetsBinding.instance.addObserver(this);
-    showroledialog();
+    showRoleDialog();
     _fetchAreas(); // Fetch areas when the widget initializes
     _fetchVehiculs(); // Fetch areas when the widget initializes
     _mapService.updateUserLocation(widget.client);
@@ -106,6 +106,8 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
         fetchVehicles: _fetchVehiculs,
       );
     });
+    isTechOrJuicer = client!.role.toLowerCase() == 'tech' ||
+        client!.role.toLowerCase() == 'juicer';
   }
 
   // Called when the system theme changes
@@ -119,7 +121,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
   }
 
   void _applyMapTheme() async {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isDarkMode = Theme.of(context).brightness != Brightness.dark;
 
     // Load the appropriate style based on system theme using a ternary operator
     final mapStyleJson = isDarkMode
@@ -128,35 +130,6 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
 
     // Apply the selected map style (dark or standard)
     _mapController?.setMapStyle(mapStyleJson);
-  }
-
-  static const String defaultMapStyleName = 'default';
-
-  Future<void> _loadMapStyle() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? mapStyleName = prefs.getString('mapStyle') ?? defaultMapStyleName;
-
-    if (mapStyleName == defaultMapStyleName) {
-      setState(() {
-        _selectedMapStyle = null;
-      });
-      return;
-    }
-
-    try {
-      String mapStyleJson =
-          await rootBundle.loadString('assets/mapStyles/$mapStyleName.json');
-      setState(() {
-        _selectedMapStyle = mapStyleJson;
-      });
-    } catch (e) {
-      // Handle error, e.g., log it or show a message to the user
-      print('Error loading map style: $e');
-      // Optionally, set a default style or show an error message
-      setState(() {
-        _selectedMapStyle = null;
-      });
-    }
   }
 
   @override
@@ -281,7 +254,8 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
               tooltipMessage: 'Current Location',
               onPressed: _initializeLocation,
             ),
-          if (currentLocation != null) _buildMapGuidButton(),
+          if (currentLocation != null&& !isTechOrJuicer) _buildMapGuidButton(),
+          if (currentLocation != null&&  isTechOrJuicer) _buildChatButton(),
           if (currentLocation != null)
             ScanCodeButton(
               client: widget.client,
@@ -294,7 +268,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
           if (currentLocation != null)
             PositionedButton(
               icon: Icons.layers_outlined,
-              bottom: 120,
+              bottom: 60,
               left: 20,
               tooltipMessage: 'Change Map Style',
               onPressed: _showMapThemeDialog,
@@ -446,8 +420,11 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
       showModalBottomSheet(
         context: context,
         builder: (context) => VehicleBottomSheet(
-          markerInfo: markerInfo, // Pass vehicle marker information
-          currentLocation: currentLocation, // Pass current location
+          userId: client!.userId,
+          markerInfo: markerInfo,
+          // Pass vehicle marker information
+          currentLocation: currentLocation,
+          // Pass current location
           drawRoute:
               (LatLng origin, LatLng destination, MarkerId markerId) async {
             final routeData = await _mapService.fetchRouteDetails(
@@ -784,6 +761,39 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
       ),
     );
   }
+  Widget _buildChatButton() {
+
+    return Positioned(
+      bottom: 140,
+      // Positioned above the Current Location button
+      right: 20,
+      child: Tooltip(
+        message: 'Open chat',
+        child: RawMaterialButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => SessionListPage(client: client!)),
+            );
+          },
+          fillColor: Theme.of(context).colorScheme.primary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8.0),
+          ),
+          constraints: const BoxConstraints.tightFor(
+            width: 40.0,
+            height: 40.0,
+          ),
+          child: Icon(
+            Icons.chat,
+            size: 24.0,
+            color: Theme.of(context).colorScheme.onPrimary,
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _buildScanCodeButton(Client client) {
     final buttonColor =
@@ -1059,7 +1069,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> showroledialog() async {
+  Future<void> showRoleDialog() async {
     showDialog(
       context: context,
       builder: (context) {
