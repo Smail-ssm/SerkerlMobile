@@ -7,6 +7,7 @@ import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -138,6 +139,24 @@ Future<Client?> fetchClientDataByEmail(String email) async {
     // Handle any errors that occur during the process
     print('Error fetching user data by email: ' + e.toString());
     return null;
+  }
+}
+
+void changeMapTheme(String theme, GoogleMapController? _mapController) async {
+  const mapStyles = {
+    'aubergine': 'assets/mapStyles/aubergine.json',
+    'dark': 'assets/mapStyles/dark.json',
+    'night': 'assets/mapStyles/night.json',
+    'standard': 'assets/mapStyles/standard.json',
+  };
+
+  final stylePath = mapStyles[theme] ?? mapStyles['standard'];
+
+  try {
+    final style = await rootBundle.loadString(stylePath!);
+    _mapController?.setMapStyle(style);
+  } catch (e) {
+    print('Error loading map style: $e');
   }
 }
 

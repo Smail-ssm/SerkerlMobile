@@ -21,7 +21,6 @@ import '../services/map_service.dart';
 import '../services/parkingService.dart';
 import '../util/VehicleUtils.dart';
 import '../util/util.dart';
-import '../widgets/CodeInputBottomSheet.dart';
 import '../widgets/CustomGoogleMap.dart';
 import '../widgets/MapGuideBottomSheet.dart';
 import '../widgets/MarkerInfo.dart';
@@ -76,16 +75,19 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
   bool isTechOrJuicer = false;
   final bool _showMapGuide = false;
 
-  late LatLng _destination; // Track loading state
+  late LatLng? _destination; // Track loading state
+  static const LatLng? nullDestination = LatLng(0.0, 0.0); // Track loading state
   final MapType _currentMapType = MapType.normal; // Default map type
 
   @override
   void initState() {
     super.initState();
+    _destination =
+        nullDestination; // Set default location or fetch it from some method
 
     _initializeLocation();
     WidgetsBinding.instance.addObserver(this);
-    showRoleDialog();
+    // showRoleDialog();
     _fetchAreas(); // Fetch areas when the widget initializes
     _fetchVehiculs(); // Fetch areas when the widget initializes
     _mapService.updateUserLocation(widget.client);
@@ -254,17 +256,19 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
               tooltipMessage: 'Current Location',
               onPressed: _initializeLocation,
             ),
-          if (currentLocation != null&& !isTechOrJuicer) _buildMapGuidButton(),
-          if (currentLocation != null&&  isTechOrJuicer) _buildChatButton(),
-          if (currentLocation != null)
-            ScanCodeButton(
-              client: widget.client,
-              context: context,
-              getMissingFields: _getMissingFields,
-              showMissingInfoDialog: _showMissingInfoDialog,
-              buildJuicerOperationsBottomSheet: () =>
-                  const JuicerOperationsBottomSheet(),
-            ),
+          if (currentLocation != null && !isTechOrJuicer) _buildMapGuidButton(),
+          if (currentLocation != null && isTechOrJuicer) _buildChatButton(),
+          currentLocation != null
+              ? ScanCodeButton(
+                  client: widget.client,
+                  context: context,
+                  getMissingFields: _getMissingFields,
+                  showMissingInfoDialog: _showMissingInfoDialog,
+                  buildJuicerOperationsBottomSheet: () =>
+                      const JuicerOperationsBottomSheet(),
+                  destination: _destination, // Pass the destination
+                )
+              : Text('Waiting for location or destination.'),
           if (currentLocation != null)
             PositionedButton(
               icon: Icons.layers_outlined,
@@ -334,7 +338,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
         final previousMarkerId = _destinationMarkerIds.last;
         _removeMarker(
             previousMarkerId.value); // Remove using the string ID of MarkerId
-      }
+        }
 
       // Add the new destination marker
       _markers.add(marker);
@@ -402,6 +406,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
 
       // Remove marker info from the map
       _markerInfoMap.remove(markerId);
+      _destination =nullDestination;
     });
   }
 
@@ -420,11 +425,9 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
       showModalBottomSheet(
         context: context,
         builder: (context) => VehicleBottomSheet(
-          userId: client!.userId,
-          markerInfo: markerInfo,
-          // Pass vehicle marker information
-          currentLocation: currentLocation,
-          // Pass current location
+          // userId: client!.userId,
+          markerInfo: markerInfo, // Pass vehicle marker information
+          currentLocation: currentLocation, // Pass current location
           drawRoute:
               (LatLng origin, LatLng destination, MarkerId markerId) async {
             final routeData = await _mapService.fetchRouteDetails(
@@ -761,8 +764,8 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
       ),
     );
   }
-  Widget _buildChatButton() {
 
+  Widget _buildChatButton() {
     return Positioned(
       bottom: 140,
       // Positioned above the Current Location button
@@ -789,71 +792,6 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
             Icons.chat,
             size: 24.0,
             color: Theme.of(context).colorScheme.onPrimary,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildScanCodeButton(Client client) {
-    final buttonColor =
-        (client.balance > 0 || client.role.toLowerCase() == 'juicer')
-            ? Colors.red
-            : Colors.grey; // Red if balance > 0 or role is juicer, grey if not
-    const iconColor = Colors.white; // White text color for the Scan button
-
-    return Positioned(
-      bottom: 20,
-      // Position it at the bottom
-      left: 20,
-      // Padding from the left side
-      right: 20,
-      // Padding from the right side, making it span almost the entire width
-      child: Tooltip(
-        message: 'Scan QR Code', // Tooltip message
-        child: RawMaterialButton(
-          onPressed:
-              (client.balance > 0 || client.role.toLowerCase() == 'juicer')
-                  ? () {
-                      // Check if any required info is missing
-                      List<String> missingFields = _getMissingFields(client);
-
-                      if (missingFields.isNotEmpty) {
-                        _showMissingInfoDialog(
-                            missingFields); // Show dialog if info is missing
-                      } else {
-                        // Proceed to show the scan bottom sheet if no info is missing
-                        showModalBottomSheet(
-                          context: context,
-                          builder: (BuildContext context) {
-                            if (client.role.toLowerCase() == 'juicer') {
-                              return const JuicerOperationsBottomSheet(); // Custom bottom sheet for Juicer operations
-                            } else {
-                              return const CodeInputBottomSheet(); // Custom bottom sheet widget for clients
-                            }
-                          },
-                        );
-                      }
-                    }
-                  : null,
-          // Disable the button if balance is 0 and role is not juicer
-          fillColor: buttonColor,
-          // Set the button background color to red or grey depending on balance or role
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(
-                30.0), // Rounded corners for a smoother look
-          ),
-          constraints: const BoxConstraints.tightFor(
-            width: double.infinity, // Full width button
-            height: 60.0, // Larger height for better accessibility
-          ),
-          child: const Text(
-            'Scan', // Display "Scan" on the button
-            style: TextStyle(
-              fontSize: 18.0, // Increase text size for better readability
-              color: iconColor, // Set the text color to white for contrast
-              fontWeight: FontWeight.bold, // Make the text bold
-            ),
           ),
         ),
       ),
@@ -891,33 +829,6 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
           ],
         );
       },
-    );
-  }
-
-  Widget _buildMapStyleButton() {
-    return Positioned(
-      bottom: 120, // Positioned above the Scan button on the left
-      left: 20, // Aligned to the left side
-      child: Tooltip(
-        message: 'Change Map Style', // Tooltip message
-        child: RawMaterialButton(
-          onPressed: _showMapThemeDialog,
-          fillColor: Theme.of(context).colorScheme.primary,
-          // Use theme-based color
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8.0), // Rounded corners
-          ),
-          constraints: const BoxConstraints.tightFor(
-            width: 40.0,
-            height: 40.0,
-          ),
-          child: Icon(
-            Icons.layers_outlined,
-            size: 24.0,
-            color: Theme.of(context).colorScheme.onPrimary,
-          ),
-        ),
-      ),
     );
   }
 
@@ -1067,26 +978,6 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
         isLoading = false; // Hide loading indicator on error
       });
     }
-  }
-
-  Future<void> showRoleDialog() async {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("ROle"),
-          content: Text("ROle :\n\n" + widget.client!.role),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text("OK"),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   void _changeMapTheme(String theme) async {

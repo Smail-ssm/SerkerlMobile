@@ -1,6 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
-import 'package:http/http.dart' as http;
+
+import '../model/Rental.dart';
+import '../services/RentalService.dart';
+import '../services/Vehicleservice.dart';
 
 class CodeInputBottomSheet extends StatefulWidget {
   const CodeInputBottomSheet({Key? key}) : super(key: key);
@@ -10,17 +14,20 @@ class CodeInputBottomSheet extends StatefulWidget {
 }
 
 class _CodeInputBottomSheetState extends State<CodeInputBottomSheet> {
+  final Vehicleservice _vehicleService = Vehicleservice();
+  final RentalService _rentalService = RentalService();
   final TextEditingController _textEditingController = TextEditingController();
   late QRViewController _qrViewController;
   final GlobalKey _qrKey = GlobalKey(debugLabel: 'QR');
   String _scannedCode = '';
   bool _isFlashOn = false; // Flash state variable
   bool _isUnlocking = false; // Unlock state variable
-
+  String userId = FirebaseAuth.instance.currentUser!.uid;
   @override
   void dispose() {
     _textEditingController.dispose();
-    _qrViewController.dispose(); // Dispose of the QRViewController to prevent memory leaks
+    _qrViewController
+        .dispose(); // Dispose of the QRViewController to prevent memory leaks
     super.dispose();
   }
 
@@ -31,19 +38,16 @@ class _CodeInputBottomSheetState extends State<CodeInputBottomSheet> {
     final isDarkMode = theme.brightness == Brightness.dark;
 
     return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.7, // Adjust height as needed
+      height:
+          MediaQuery.of(context).size.height * 0.7, // Adjust height as needed
       child: LayoutBuilder(
         builder: (context, constraints) {
-          bool isLandscape = constraints.maxWidth > constraints.maxHeight;
           return Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (isLandscape)
-                  _buildLandscapeLayout(theme, isDarkMode)
-                else
-                  _buildPortraitLayout(theme, isDarkMode),
+                _buildPortraitLayout(theme, isDarkMode),
                 const SizedBox(height: 16.0),
                 Align(
                   alignment: Alignment.centerRight,
@@ -120,7 +124,7 @@ class _CodeInputBottomSheetState extends State<CodeInputBottomSheet> {
   // Build layout for portrait mode
   Widget _buildPortraitLayout(ThemeData theme, bool isDarkMode) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           'Scan QR Code',
@@ -132,8 +136,9 @@ class _CodeInputBottomSheetState extends State<CodeInputBottomSheet> {
         ),
         const SizedBox(height: 8.0),
         SizedBox(
-          height: 200, // Explicit height for QRView
-          width: double.infinity,
+          height: 250,
+          // Explicit height for QRView
+          width: 250,
           child: QRView(
             key: _qrKey,
             onQRViewCreated: _onQRViewCreated,
@@ -175,7 +180,7 @@ class _CodeInputBottomSheetState extends State<CodeInputBottomSheet> {
     controller.scannedDataStream.listen((scanData) {
       setState(() {
         _scannedCode = scanData.code!;
-        _hideBottomSheetAndShowDialog(scanData.code!); // Hide the bottom sheet and show unlock dialog
+        _showUnlockDialog(_scannedCode);
       });
     });
   }
@@ -188,17 +193,12 @@ class _CodeInputBottomSheetState extends State<CodeInputBottomSheet> {
     });
   }
 
-  // Hide the bottom sheet and show unlock dialog after scanning the QR code
-  void _hideBottomSheetAndShowDialog(String vehicleCode) {
-    Navigator.of(context).pop(); // Hide the bottom sheet
-    _showUnlockDialog(vehicleCode); // Show the unlock confirmation dialog
-  }
-
   // Show unlock dialog with a loading spinner while checking
   void _showUnlockDialog(String vehicleCode) {
     showDialog(
       context: context,
-      barrierDismissible: false, // Prevent closing the dialog while processing
+      barrierDismissible: false,
+      // Prevent closing the dialog while processing
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setState) {
@@ -206,9 +206,12 @@ class _CodeInputBottomSheetState extends State<CodeInputBottomSheet> {
               title: Text('Unlocking Vehicle'),
               content: Row(
                 children: [
-                  CircularProgressIndicator(), // Loading spinner
-                  SizedBox(width: 16), // Add some space between the spinner and text
-                  Expanded( // Expanded forces the text to take up the remaining space
+                  CircularProgressIndicator(),
+                  // Loading spinner
+                  SizedBox(width: 16),
+                  // Add some space between the spinner and text
+                  Expanded(
+                    // Expanded forces the text to take up the remaining space
                     child: Text('Please wait while we unlock the vehicle...'),
                   ),
                 ],
@@ -219,34 +222,23 @@ class _CodeInputBottomSheetState extends State<CodeInputBottomSheet> {
       },
     );
 
-
     // Perform the checks and unlock process after showing the dialog
     _performChecksAndUnlock(vehicleCode);
   }
 
   // Perform balance and vehicle availability checks before unlocking
   void _performChecksAndUnlock(String vehicleCode) async {
-    setState(() {
-      _isUnlocking = true;
-    });
-
     // Simulate balance check and other validations
     bool balanceCheckPassed = await _checkBalance();
-    bool vehicleAvailable = await _checkVehicleAvailability(vehicleCode);
 
-    if (balanceCheckPassed && vehicleAvailable) {
+    if (balanceCheckPassed) {
       _unlockVehicle(vehicleCode); // If all checks pass, unlock the vehicle
     } else {
       // Handle case where checks fail
       if (mounted) {
-        _showError('Failed to unlock. Please ensure balance and vehicle availability.');
+        _showError(
+            'Failed to unlock. Please ensure balance and vehicle availability.');
       }
-    }
-
-    if (mounted) {
-      setState(() {
-        _isUnlocking = false;
-      });
     }
   }
 
@@ -257,37 +249,64 @@ class _CodeInputBottomSheetState extends State<CodeInputBottomSheet> {
     return true; // Assuming balance check passes
   }
 
-  // Simulated vehicle availability check
-  Future<bool> _checkVehicleAvailability(String vehicleCode) async {
-    // Simulate an API call to check if the vehicle is available
-    await Future.delayed(const Duration(seconds: 1)); // Simulating delay
-    return true; // Assuming vehicle is available
-  }
-
   // Unlock vehicle using either scanned or manually entered code
 // Unlock vehicle using either scanned or manually entered code
-  void _unlockVehicle(String vehicleCode) async {
+
+
+
+// Show error message
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+// Show success message
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _unlockVehicle(String vehicleCode) async {
+    print('Vehicle code fetched: ${vehicleCode}');
     try {
-      await Future.delayed(const Duration(seconds: 5)); // Simulating delay
+      final String rentalId =
+          "R-${DateTime.now().millisecondsSinceEpoch}-${vehicleCode}";
 
-      // Simulate sending code to the backend to unlock the vehicle
-      http.Response response = http.Response("body", 200); // Simulated response
+      // If reserving, create a new Rental object
+      Rental? rental;
+      bool isReserving = true;
+      rental = Rental(
+        id: rentalId,
+        vId: vehicleCode,
+        startTime: isReserving ? DateTime.now().toString() : null,
+        expectedReturnTime: isReserving
+            ? DateTime.now().add(const Duration(hours: 1)).toString()
+            : null,
+        baseRate: 5.0,
+        unlockPrice: 1.0,
+        pausePrice: 0.5,
+        user: userId,
+        notes: isReserving
+            ? 'Reserved by user ${userId} at ${DateTime.now()}'
+            : 'Reservation created but not active.',
+      ); // Simulate delay
+      bool isUnlocked =
+      await _vehicleService.unlockVh(vehicleCode, userId, rental);
 
-      if (response.statusCode == 200) {
+      if (isUnlocked) {
         if (mounted) {
-          // Ensure we are using a valid context and call pop in the UI thread
-          Future.delayed(Duration.zero, () {
-            if (mounted) Navigator.of(context).pop(); // Close the unlock dialog
-          });
-
-          // Show success message and start the ride
-          _showSuccess('Vehicle unlocked successfully! Starting ride...');
-          _startRide(vehicleCode); // Start the ride after successful unlock
+          Navigator.of(context).pop(); // Close the bottom sheet
         }
+
+        _showSuccess('Vehicle unlocked successfully! Starting ride...');
       } else {
         if (mounted) {
           Future.delayed(Duration.zero, () {
-            if (mounted) Navigator.of(context).pop(); // Close the dialog on failure
+            if (mounted) {
+              Navigator.of(context).pop(); // Close the dialog on failure
+            }
           });
 
           // Show error if unlocking fails
@@ -305,30 +324,45 @@ class _CodeInputBottomSheetState extends State<CodeInputBottomSheet> {
       }
     }
   }
+//todo when cancling implment this
+//   Future<void> _handleReservation(String selectedVH) async {
 
-// Start the ride after unlocking the vehicle
-  void _startRide(String vehicleCode) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Ride started with vehicle code: $vehicleCode'),
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
-
-// Show error message
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
-
-// Show success message
-  void _showSuccess(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
-
-
+// try {
+//   if (isReserving) {
+//
+//     // Reserve the vehicle and save the rental
+//
+//   } else {
+//     // Update the rental notes with the cancellation message
+//     rental.notes += ' Reservation canceled by user ${ userId} at ${DateTime.now()}';
+//
+//     // Cancel the reservation and update the rental notes
+//     await _vehicleService.cancelReservation(selectedVH,  userId);
+//     await _rentalService.updateRentalNotes(rental.id, rental.notes);
+//
+//      selectedVH  = null;
+//
+//
+//     Fluttertoast.showToast(
+//       msg: 'Reservation canceled successfully!',
+//       toastLength: Toast.LENGTH_SHORT,
+//       gravity: ToastGravity.BOTTOM,
+//       backgroundColor: Colors.green,
+//       textColor: Colors.white,
+//       fontSize: 16.0,
+//     );
+//   }
+// } catch (e) {
+//   Fluttertoast.showToast(
+//     msg: isReserving
+//         ? 'Failed to reserve vehicle. Please try again.'
+//         : 'Failed to cancel reservation. Please try again.',
+//     toastLength: Toast.LENGTH_SHORT,
+//     gravity: ToastGravity.BOTTOM,
+//     backgroundColor: Colors.red,
+//     textColor: Colors.white,
+//     fontSize: 16.0,
+//   );
+// }
+// }
 }

@@ -1,7 +1,7 @@
 import 'Battery.dart';
 import 'DeviceInfo.dart';
 import 'MaintenanceLog.dart';
-import 'rental.dart';
+import 'Rental.dart';
 
 class Vehicle {
   String id;

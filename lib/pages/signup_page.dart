@@ -9,12 +9,10 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
-// Import your home page or the next page after signing up
-
 class SignUpPage extends StatefulWidget {
-  final User? user; // Declare user variable to accept user info
+  final UserCredential? userCredential;
 
-  const SignUpPage({Key? key, this.user}) : super(key: key);
+  const SignUpPage({Key? key, this.userCredential}) : super(key: key);
 
   @override
   _SignUpPageState createState() => _SignUpPageState();
@@ -30,7 +28,6 @@ class _SignUpPageState extends State<SignUpPage> {
   late TextEditingController _fullNameController;
   late TextEditingController _dateOfBirthController;
   late TextEditingController _addressController;
-  late TextEditingController _roleController;
   late TextEditingController _otpController;
 
   bool _isLoading = false;
@@ -42,14 +39,19 @@ class _SignUpPageState extends State<SignUpPage> {
   @override
   void initState() {
     super.initState();
-    _emailOrPhoneController = TextEditingController(text: widget.user?.email ?? '');
+    _emailOrPhoneController = TextEditingController();
     _passwordController = TextEditingController();
     _usernameController = TextEditingController();
     _fullNameController = TextEditingController();
     _dateOfBirthController = TextEditingController();
     _addressController = TextEditingController();
-    _roleController = TextEditingController();
-    _otpController = TextEditingController();
+    User? fuser = widget.userCredential?.user;
+    if (fuser != null) {
+      _emailOrPhoneController.text = fuser.email ?? '';
+      _usernameController.text = fuser.displayName ?? '';
+      _fullNameController.text = fuser.displayName ?? '';
+      _addressController.text = ''; // Populate if address was stored
+    }
   }
 
   @override
@@ -72,7 +74,8 @@ class _SignUpPageState extends State<SignUpPage> {
               color: theme.scaffoldBackgroundColor,
             ),
             SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 20.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 40.0, vertical: 20.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
@@ -81,8 +84,8 @@ class _SignUpPageState extends State<SignUpPage> {
                     style: textTheme.headlineMedium,
                   ),
                   const SizedBox(height: 30.0),
-                  _buildTextField(
-                      _emailOrPhoneController, 'Email or Phone Number', Icons.email, TextInputType.text),
+                  _buildTextField(_emailOrPhoneController,
+                      'Email or Phone Number', Icons.email, TextInputType.text),
                   const SizedBox(height: 20.0),
                   if (!_isPhoneNumber) ...[
                     _buildTextField(
@@ -93,17 +96,18 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     const SizedBox(height: 20.0),
                   ],
-                  _buildTextField(_usernameController, 'Username', Icons.person),
+                  _buildTextField(
+                      _usernameController, 'Username', Icons.person),
                   const SizedBox(height: 20.0),
-                  _buildTextField(_fullNameController, 'Full Name', Icons.person_outline),
+                  _buildTextField(
+                      _fullNameController, 'Full Name', Icons.person_outline),
                   const SizedBox(height: 20.0),
                   _buildDateOfBirthField(),
                   const SizedBox(height: 20.0),
-                  _buildTextField(_addressController, 'Address', Icons.location_on),
+                  _buildTextField(
+                      _addressController, 'Address', Icons.location_on),
                   const SizedBox(height: 20.0),
-                  _buildTextField(_roleController, 'Role/Permissions', Icons.security),
                   if (_isPhoneNumber && _isOtpSent) ...[
-                    const SizedBox(height: 20.0),
                     _buildTextField(
                       _otpController,
                       'Enter OTP',
@@ -141,12 +145,12 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Widget _buildTextField(
-      TextEditingController controller,
-      String label,
-      IconData icon, [
-        TextInputType keyboardType = TextInputType.text,
-        bool obscureText = false,
-      ]) {
+    TextEditingController controller,
+    String label,
+    IconData icon, [
+    TextInputType keyboardType = TextInputType.text,
+    bool obscureText = false,
+  ]) {
     final theme = Theme.of(context);
 
     return Column(
@@ -275,19 +279,22 @@ class _SignUpPageState extends State<SignUpPage> {
         );
       } else {
         // Email sign up
-        if (!_validateForm(_emailOrPhoneController, _passwordController, _usernameController, _fullNameController, context)) {
+        if (!_validateForm(_emailOrPhoneController, _passwordController,
+            _usernameController, _fullNameController, context)) {
           setState(() {
             _isLoading = false;
           });
           return;
         }
-
-        final userCredential = await _auth.createUserWithEmailAndPassword(
-          email: _emailOrPhoneController.text.trim(),
-          password: _passwordController.text.trim(),
-        );
-
-        _createUserInFirestore(userCredential.user!);
+        if (widget.userCredential?.user == null) {
+          final userCredential = await _auth.createUserWithEmailAndPassword(
+            email: _emailOrPhoneController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
+          _createUserInFirestore(userCredential.user!);
+        } else {
+          _createUserInFirestore(widget.userCredential!.user!);
+        }
       }
     } catch (e) {
       _showErrorDialog(context, e.toString());
@@ -313,7 +320,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
       _createUserInFirestore(userCredential.user!);
     } catch (e) {
-      _showErrorDialog(context, e.toString());
+      _showErrorDialog(context, 'Invalid OTP. Please try again.');
     } finally {
       setState(() {
         _isLoading = false;
@@ -367,16 +374,17 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   bool _validateForm(
-      TextEditingController emailController,
-      TextEditingController passwordController,
-      TextEditingController usernameController,
-      TextEditingController fullNameController,
-      BuildContext context,
-      ) {
-    if (!_isPhoneNumber && (emailController.text.isEmpty ||
-        passwordController.text.isEmpty ||
-        usernameController.text.isEmpty ||
-        fullNameController.text.isEmpty)) {
+    TextEditingController emailController,
+    TextEditingController passwordController,
+    TextEditingController usernameController,
+    TextEditingController fullNameController,
+    BuildContext context,
+  ) {
+    if (!_isPhoneNumber &&
+        (emailController.text.isEmpty ||
+            passwordController.text.isEmpty ||
+            usernameController.text.isEmpty ||
+            fullNameController.text.isEmpty)) {
       showMessageDialog(
           context, 'Validation Error', 'Please fill in all required fields.');
       return false;

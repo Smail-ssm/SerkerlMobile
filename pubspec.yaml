@@ -60,6 +60,7 @@ dependencies:
   uuid: any
   args: any
   in_app_notification: ^1.1.2
+  flutter_timer_countdown: ^1.0.7
 google_maps_webservice: ^0.0.20
 
 

@@ -319,8 +319,22 @@ class _SignInPageState extends State<SignInPage> {
           idToken: googleAuth.idToken,
         );
         final userCredential = await _auth.signInWithCredential(credential);
+
+        // Try to fetch client data
         final client = await fetchClientData(userCredential.user!.uid);
-        _navigateToHome(client!);
+
+        if (client != null) {
+          // Navigate to Home if client exists
+          _navigateToHome(client);
+        } else {
+          // Redirect to Signup if client does not exist
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => SignUpPage(userCredential: userCredential)
+              ));
+
+        }
       }
     } catch (e) {
       Fluttertoast.showToast(

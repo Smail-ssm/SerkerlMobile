@@ -8,6 +8,7 @@ import 'package:ebike/util/NotificationService.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -103,19 +104,26 @@ Future<void> main() async {
       fontSize: 16.0,
     );
   }
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,    // Portrait mode
+    DeviceOrientation.portraitDown,  // Portrait mode
+    // DeviceOrientation.landscapeLeft, // Landscape mode
+    // DeviceOrientation.landscapeRight // Landscape mode
+  ]).then((_) {
+    runApp(
+      EasyLocalization(
+        supportedLocales: const [
+          Locale('en', 'US'),
+          Locale('fr', 'FR'),
+          Locale('ar', 'TN')
+        ],
+        path: 'assets/translations',
+        fallbackLocale: const Locale('en', 'US'),
+        child: const MyApp(),
+      ),
+    );
+  });
 
-  runApp(
-    EasyLocalization(
-      supportedLocales: const [
-        Locale('en', 'US'),
-        Locale('fr', 'FR'),
-        Locale('ar', 'TN')
-      ],
-      path: 'assets/translations',
-      fallbackLocale: const Locale('en', 'US'),
-      child: const MyApp(),
-    ),
-  );
 }
 
 // Firebase background handler

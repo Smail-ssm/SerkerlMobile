@@ -45,6 +45,30 @@ class RentalService {
     }
   }
 
+  // Fetch a Rental by Vehicle ID
+  Future<Rental?> getRentalByVehicleId(String vehicleId) async {
+    try {
+      String documentPath = getFirestoreDocument();
+      QuerySnapshot querySnapshot = await _firestore
+          .collection(documentPath)
+          .doc('Rentals')
+          .collection('Rentals')
+          .where('vId', isEqualTo: vehicleId)
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        return Rental.fromJson(querySnapshot.docs.first.data() as Map<String, dynamic>);
+      } else {
+        print('No rental found for vehicle ID $vehicleId.');
+        return null;
+      }
+    } catch (e) {
+      print('Error fetching rental by vehicle ID: $e');
+      rethrow;
+    }
+  }
+
   // Fetch all Rentals for a specific user
   Future<List<Rental>> fetchRentalsByUser(String userId) async {
     try {
@@ -79,6 +103,22 @@ class RentalService {
       print('Rental with ID $rentalId updated successfully.');
     } catch (e) {
       print('Error updating rental: $e');
+      rethrow;
+    }
+  }
+  Future<void> updateRentalNotes(String rentalId, String? newNotes) async {
+    try {
+      String documentPath = getFirestoreDocument();
+      await _firestore
+          .collection(documentPath)
+          .doc('Rentals')
+          .collection('Rentals')
+          .doc(rentalId)
+          .update({'notes': newNotes});
+
+      print('Rental notes for ID $rentalId updated successfully.\n');
+    } catch (e) {
+      print('Error updating rental notes: $e');
       rethrow;
     }
   }
